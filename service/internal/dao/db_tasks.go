@@ -5,7 +5,15 @@
 package dao
 
 import (
+	"context"
+	"service/api"
 	"service/internal/dao/internal"
+	"service/internal/model/entity"
+
+	"github.com/gogf/gf/v2/database/gdb"
+	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/os/gtime"
+	"github.com/google/uuid"
 )
 
 // dbTasksDao is the data access object for the table db_tasks.
@@ -20,3 +28,101 @@ var (
 )
 
 // Add your custom methods and functionality below.
+
+// 新增任务
+func (dao *dbTasksDao) InsertTask(ctx context.Context, task *entity.DbTasks) (gdb.TX, error) {
+	db := g.DB()
+	tx, err := db.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	_, err = tx.Model("db_tasks").Insert(&entity.DbTasks{
+		Id:             task.Id,
+		Title:          task.Title,
+		Description:    task.Description,
+		Priority:       task.Priority,
+		DueDate:        task.DueDate,
+		UserId:         task.UserId,
+		MilvusVectorId: task.MilvusVectorId,
+		TaskType:       task.TaskType,
+		Status:         "todo",
+	})
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	return tx, nil
+}
+
+// 删除任务
+func (dao *dbTasksDao) DeleteTask(ctx context.Context, taskId string) error {
+	_, err := g.Model("db_tasks").Data(map[string]any{
+		"is_deleted": true,
+	}).Where("id", taskId).Update()
+	return err
+}
+
+// 更新任务
+func (dao *dbTasksDao) UpdateTask(ctx context.Context, task *entity.DbTasks) (gdb.TX, error) {
+	db := g.DB()
+	tx, err := db.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	data := g.Map{
+		"title":            task.Title,
+		"description":      task.Description,
+		"priority":         task.Priority,
+		"task_type":        task.TaskType,
+		"due_date":         task.DueDate,
+		"milvus_vector_id": task.MilvusVectorId,
+		"status":           task.Status,
+		"updated_at":       gtime.Now(),
+	}
+	_, err = tx.Model("db_tasks").Data(data).Where("id", task.Id).Update()
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	return tx, err
+}
+
+// 根据id获取任务
+func (dao *dbTasksDao) GetTask(ctx context.Context, taskId string) (*entity.DbTasks, error) {
+	result, err := g.Model("db_tasks").Where("id", taskId).One()
+	if err != nil {
+		return nil, err
+	}
+	var task entity.DbTasks
+	err = result.Struct(&task)
+	return &task, nil
+}
+
+// 获取任务列表
+func (dao *dbTasksDao) GetTaskList(ctx context.Context, req *api.GetTaskListReq, userId uuid.UUID) ([]*api.TaskItem, error) {
+	model := g.Model("db_tasks").
+		Where("user_id = ?", userId).
+		Where("is_deleted = ?", false).
+		Order("created_at desc")
+
+	if req.StartTime != "" && req.EndTime != "" {
+		model = model.Where("due_date >= ? and due_date <= ?", req.StartTime, req.EndTime)
+	}
+	if req.TaskType != "" {
+		model = model.Where("task_type = ?", req.TaskType)
+	}
+	if req.Priority != "" {
+		model = model.Where("priority = ?", req.Priority)
+	}
+	if req.Status != "" {
+		model = model.Where("status = ?", req.Status)
+	}
+
+	var tasks []*api.TaskItem
+	err := model.Scan(&tasks)
+	if err != nil {
+		return nil, err
+	}
+
+	return tasks, nil
+}

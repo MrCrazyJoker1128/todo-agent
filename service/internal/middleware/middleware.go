@@ -29,12 +29,12 @@ func MiddlewareResponse(r *ghttp.Request) {
 	data := r.GetHandlerResponse()
 	if data == nil {
 		r.Response.WriteJson(Response{
-			Code:    0,
+			Code:    200,
 			Message: "success",
 		})
 	} else {
 		r.Response.WriteJson(Response{
-			Code:    0,
+			Code:    200,
 			Message: "success",
 			Data:    data,
 		})

@@ -11,5 +11,6 @@ func RegisterRoutes(group *ghttp.RouterGroup) {
 	group.Group("/user", func(group *ghttp.RouterGroup) {
 		group.POST("/login", userController.Login)
 		group.POST("/register", userController.UserRegister)
+		group.GET("/userInfo", userController.GetUserInfo)
 	})
 }

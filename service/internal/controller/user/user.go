@@ -71,3 +71,21 @@ func (c *UserController) UserRegister(ctx context.Context, req *api.RegisterReq)
 		Message: "注册成功",
 	}, nil
 }
+func (c *UserController) GetUserInfo(ctx context.Context, req *api.GetUserInfoReq) (res *api.GetUserInfoRes, err error) {
+	r := g.RequestFromCtx(ctx)
+	userId := r.GetParam("userId").String()
+	result, err := dao.DbUsers.GetUserById(ctx, userId)
+	if err != nil {
+		g.Log().Error(ctx, "get user by id error: %v", err)
+		return nil, err
+	}
+	if result == nil {
+		g.Log().Error(ctx, "user not found")
+		return nil, errors.New("没有找到用户，请先登录")
+	}
+	return &api.GetUserInfoRes{
+		Email:    result.Email,
+		Nickname: result.Nickname,
+		Id:       result.Id.String(),
+	}, nil
+}

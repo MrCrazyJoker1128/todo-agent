@@ -21,10 +21,10 @@ type DbUsersDao struct {
 
 // DbUsersColumns defines and stores column names for the table db_users.
 type DbUsersColumns struct {
-	Id           string // 主键：用户唯一标识，使用 UUID 避免泄露业务量
-	Email        string // 登录邮箱：唯一索引，用于身份验证
-	PasswordHash string // 密码哈希：存储 bcrypt 加密后的密码，不存明文
-	Nickname     string // 用户昵称：前端显示用，可为空
+	Id           string // 主键：用户唯一标识 (UUID)
+	Email        string // 登录邮箱：唯一索引
+	PasswordHash string // 密码哈希：bcrypt 加密
+	Nickname     string // 用户昵称：可选
 	CreatedAt    string // 账户创建时间
 	UpdatedAt    string // 账户最后更新时间
 }

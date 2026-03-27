@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	"strings"
 
 	"service/internal/utility"
@@ -45,17 +44,15 @@ func MiddlewareAuth(r *ghttp.Request) {
 		r.Exit()
 	}
 
-	redisToken, err := utility.RedisGet(r.Context(), fmt.Sprintf("token:%s", claims.UserId))
-	if err != nil || redisToken == nil {
+	redisToken, err := utility.RedisGet(r.Context(), "token:"+claims.UserId)
+	if err != nil || redisToken == "" {
 		r.Response.WriteJson(Response{
 			Code:    401,
 			Message: "token expired",
 		})
 		r.Exit()
 	}
-
-	redisTokenStr, ok := redisToken.(string)
-	if !ok || redisTokenStr != token {
+	if strings.TrimSpace(redisToken) != token {
 		r.Response.WriteJson(Response{
 			Code:    401,
 			Message: "token mismatch",

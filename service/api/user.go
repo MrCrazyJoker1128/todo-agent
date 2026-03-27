@@ -19,3 +19,11 @@ type RegisterReq struct {
 type RegisterRes struct {
 	Message string `json:"message"`
 }
+type GetUserInfoReq struct {
+	g.Meta `path:"/userInfo" method:"get" tags:"User" summary:"通过token获取用户信息"`
+}
+type GetUserInfoRes struct {
+	Email    string `json:"email"`
+	Nickname string `json:"nickname"`
+	Id       string `json:"id"`
+}

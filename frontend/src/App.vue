@@ -1,7 +1,14 @@
 <script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
+import { ElConfigProvider } from "element-plus";
+
+import zhCn from "element-plus/es/locale/lang/zh-cn";
+defineOptions({
+  name: "App",
+});
 </script>
 
 <template>
-  <HelloWorld />
+  <el-config-provider :locale="zhCn" size="default">
+    <router-view />
+  </el-config-provider>
 </template>

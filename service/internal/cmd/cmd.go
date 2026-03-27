@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"service/internal/middleware"
+	"service/internal/router/task"
 	"service/internal/router/user"
 
 	"github.com/gogf/gf/v2/frame/g"
@@ -19,9 +20,10 @@ var (
 		Func: func(ctx context.Context, parser *gcmd.Parser) (err error) {
 			s := g.Server()
 			s.Group("/api", func(group *ghttp.RouterGroup) {
-				group.Middleware(middleware.MiddlewareResponse)
 				group.Middleware(middleware.MiddlewareAuth)
+				group.Middleware(middleware.MiddlewareResponse)
 				user.RegisterRoutes(group)
+				task.RegisterRoutes(group)
 			})
 			s.Run()
 			return nil

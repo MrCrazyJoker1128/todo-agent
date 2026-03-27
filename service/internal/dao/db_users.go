@@ -28,7 +28,8 @@ var (
 // Add your custom methods and functionality below.
 
 func (dao *dbUsersDao) GetUserByEmail(ctx context.Context, email string) (*entity.DbUsers, error) {
-	result, err := g.Model("db_users").Where("email", email).One()
+	g.Log().Info(ctx, "SQL: SELECT * FROM db_users WHERE email = '%s'", email)
+	result, err := g.Model("db_users").Ctx(ctx).Where("email", email).One()
 	if err != nil || result == nil {
 		return nil, err
 	}
@@ -42,7 +43,8 @@ func (dao *dbUsersDao) GetUserByEmail(ctx context.Context, email string) (*entit
 
 func (dao *dbUsersDao) Register(ctx context.Context, user *api.RegisterReq) (uuid.UUID, error) {
 	id := uuid.New()
-	_, err := g.Model("db_users").Insert(&entity.DbUsers{
+	g.Log().Info(ctx, "SQL: INSERT INTO db_users (email, password_hash, nickname, id) VALUES ('%s', '%s', '%s', '%s')", user.Email, user.Password, user.Nickname, id)
+	_, err := g.Model("db_users").Ctx(ctx).Insert(&entity.DbUsers{
 		Email:        user.Email,
 		PasswordHash: user.Password,
 		Nickname:     user.Nickname,
@@ -52,5 +54,18 @@ func (dao *dbUsersDao) Register(ctx context.Context, user *api.RegisterReq) (uui
 		return uuid.Nil, err
 	}
 	return id, nil
+}
 
+func (dao *dbUsersDao) GetUserById(ctx context.Context, id string) (*entity.DbUsers, error) {
+	g.Log().Info(ctx, "SQL: SELECT * FROM db_users WHERE id = '%s'", id)
+	result, err := g.Model("db_users").Ctx(ctx).Where("id", id).One()
+	if err != nil || result == nil {
+		return nil, err
+	}
+	var dbUser entity.DbUsers
+	err = result.Struct(&dbUser)
+	if err != nil {
+		return nil, err
+	}
+	return &dbUser, nil
 }

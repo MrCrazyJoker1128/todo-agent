@@ -28,8 +28,12 @@ func RedisSet(ctx context.Context, key string, value any, expire ...time.Duratio
 	return err
 }
 
-func RedisGet(ctx context.Context, key string) (any, error) {
-	return g.Redis().Get(ctx, key)
+func RedisGet(ctx context.Context, key string) (string, error) {
+	result, err := g.Redis().Get(ctx, key)
+	if err != nil {
+		return "", err
+	}
+	return result.String(), nil
 }
 
 func RedisDel(ctx context.Context, key string) error {

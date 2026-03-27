@@ -1,0 +1,179 @@
+:root {
+  --el-color-primary: #ff8a80;
+  --el-color-primary-light-3: #ff9e98;
+  --el-color-primary-light-5: #ffb2ad;
+  --el-color-primary-light-7: #ffc5c2;
+  --el-color-primary-light-8: #ffd8d6;
+  --el-color-primary-light-9: #ffebe9;
+  --el-color-primary-dark-2: #cc6f66;
+
+  --el-color-success: #81c784;
+  --el-color-success-light-3: #9fd29b;
+  --el-color-success-light-5: #bddcb4;
+  --el-color-success-light-7: #dbe6cd;
+  --el-color-success-light-8: #e5f0df;
+  --el-color-success-light-9: #eff9f1;
+  --el-color-success-dark-2: #679e69;
+
+  --el-color-warning: #ffb74d;
+  --el-color-warning-light-3: #ffc57a;
+  --el-color-warning-light-5: #ffd29a;
+  --el-color-warning-light-7: #ffe0ba;
+  --el-color-warning-light-8: #ffe8cc;
+  --el-color-warning-light-9: #fff1dd;
+  --el-color-warning-dark-2: #cc933e;
+
+  --el-color-danger: #ef5350;
+  --el-color-danger-light-3: #f27977;
+  --el-color-danger-light-5: #f59f9e;
+  --el-color-danger-light-7: #f8c5c4;
+  --el-color-danger-light-8: #fad5d4;
+  --el-color-danger-light-9: #fce5e4;
+  --el-color-danger-dark-2: #bf4340;
+
+  --el-color-info: #90a4ae;
+  --el-color-info-light-3: #acb8c2;
+  --el-color-info-light-5: #c7cdd6;
+  --el-color-info-light-7: #e1e5ea;
+  --el-color-info-light-8: #eceff2;
+  --el-color-info-light-9: #f5f7f9;
+  --el-color-info-dark-2: #73838b;
+
+  --el-text-color-primary: #303133;
+  --el-text-color-regular: #606266;
+  --el-text-color-secondary: #909399;
+  --el-text-color-placeholder: #a8abb2;
+  --el-border-color: #dcdfe6;
+  --el-border-color-light: #e4e7ed;
+  --el-fill-color: #f5f7fa;
+  --el-bg-color: #ffffff;
+}
+
+.el-button {
+  background-color: transparent !important;
+  border-color: rgba(255, 138, 128, 0.3) !important;
+  color: #606266 !important;
+
+  &:hover {
+    background-color: rgba(255, 138, 128, 0.1) !important;
+    border-color: #ff8a80 !important;
+    color: #ff8a80 !important;
+  }
+
+  &.is-plain:hover {
+    background-color: rgba(255, 138, 128, 0.1) !important;
+    border-color: #ff8a80 !important;
+    color: #ff8a80 !important;
+  }
+}
+
+.el-button--primary,
+.el-button.primary {
+  background-color: #ff8a80 !important;
+  border-color: #ff8a80 !important;
+  color: #ffffff !important;
+
+  &:hover {
+    background-color: #ff9e98 !important;
+    border-color: #ff9e98 !important;
+    color: #ffffff !important;
+  }
+
+  &:active {
+    background-color: #cc6f66 !important;
+    border-color: #cc6f66 !important;
+    color: #ffffff !important;
+  }
+}
+
+.el-tabs__item.is-active {
+  color: #ff8a80 !important;
+}
+
+.el-tabs__active-bar {
+  background-color: #ff8a80 !important;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.el-tabs__item:hover {
+  color: #ff8a80 !important;
+}
+
+.el-tabs__item {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.el-input__wrapper:focus-within {
+  box-shadow: 0 0 0 1px #ff8a80 inset !important;
+}
+
+.el-checkbox__input.is-checked .el-checkbox__inner {
+  background-color: #ff8a80 !important;
+  border-color: #ff8a80 !important;
+}
+
+.el-checkbox__input.is-checked .el-checkbox__inner::after {
+  border-color: #ffffff !important;
+}
+
+.el-radio__input.is-checked .el-radio__inner {
+  background-color: #ff8a80 !important;
+  border-color: #ff8a80 !important;
+}
+
+.el-switch.is-checked .el-switch__core {
+  background-color: #ff8a80 !important;
+  border-color: #ff8a80 !important;
+}
+
+.el-tag--primary {
+  background-color: #ffebe9 !important;
+  border-color: #ffebe9 !important;
+  color: #ff8a80 !important;
+}
+
+.el-message--success {
+  --el-message-bg-color: #eff9f1;
+  --el-message-border-color: #81c784;
+}
+
+.el-message--warning {
+  --el-message-bg-color: #fff1dd;
+  --el-message-border-color: #ffb74d;
+}
+
+.el-message--danger {
+  --el-message-bg-color: #fce5e4;
+  --el-message-border-color: #ef5350;
+}
+
+.el-dialog__headerbtn .el-dialog__close {
+  color: #ff8a80 !important;
+}
+
+.el-dialog__headerbtn:hover .el-dialog__close {
+  color: #ff9e98 !important;
+}
+
+.el-form-item__label {
+  color: #303133 !important;
+}
+
+.el-pagination.is-background .el-pager li.is-active {
+  background-color: #ff8a80 !important;
+}
+
+.el-pagination.is-background .el-pager li:hover {
+  color: #ff8a80 !important;
+}
+
+.el-dropdown-menu__item:focus,
+.el-dropdown-menu__item:not(.is-disabled):hover {
+  color: #ff8a80 !important;
+}
+
+.el-select-dropdown__item.is-selected {
+  color: #ff8a80 !important;
+}

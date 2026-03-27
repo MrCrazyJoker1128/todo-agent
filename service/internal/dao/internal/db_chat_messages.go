@@ -21,13 +21,12 @@ type DbChatMessagesDao struct {
 
 // DbChatMessagesColumns defines and stores column names for the table db_chat_messages.
 type DbChatMessagesColumns struct {
-	Id            string // 主键：消息唯一标识
-	UserId        string // 外键：消息归属的用户 ID
-	Role          string // 消息角色：区分是用户发送还是 AI 回复
-	Content       string // 消息内容：具体的文本对话内容
-	RelatedTaskId string // 关联任务 ID：当对话涉及创建/修改任务时，关联到此任务
-	Embedding     string // 向量数据：存储消息内容的 Embedding，用于长期记忆检索
-	CreatedAt     string // 消息发送时间
+	Id            string // 主键：消息唯一标识 (UUID)
+	UserId        string // 外键：归属用户 ID
+	Role          string // 消息角色：user|assistant
+	Content       string // 消息内容：文本
+	RelatedTaskId string // 关联任务 ID：如果消息涉及任务
+	CreatedAt     string // 消息创建时间
 }
 
 // dbChatMessagesColumns holds the columns for the table db_chat_messages.
@@ -37,7 +36,6 @@ var dbChatMessagesColumns = DbChatMessagesColumns{
 	Role:          "role",
 	Content:       "content",
 	RelatedTaskId: "related_task_id",
-	Embedding:     "embedding",
 	CreatedAt:     "created_at",
 }
 

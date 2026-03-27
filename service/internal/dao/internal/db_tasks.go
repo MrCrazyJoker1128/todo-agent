@@ -21,36 +21,36 @@ type DbTasksDao struct {
 
 // DbTasksColumns defines and stores column names for the table db_tasks.
 type DbTasksColumns struct {
-	Id          string // 主键：任务唯一标识
-	UserId      string // 外键：任务归属的用户 ID，级联删除
-	Title       string // 任务标题：简短概括任务内容
-	Description string // 任务详细描述：可包含多行文本
-	Status      string // 任务状态：todo(待办), doing(进行中), done(完成), cancelled(取消)
-	Priority    string // 任务优先级：low(低), medium(中), high(高)
-	DueDate     string // 任务截止时间：用于排序和提醒
-	ParentId    string // 父任务 ID：实现任务拆解/子任务功能，NULL 表示根任务
-	Meta        string // 扩展元数据：JSONB 格式，存储来源、标签、原始输入等非结构化数据
-	Embedding   string // 向量数据：存储任务内容的 Embedding，用于语义搜索 (如"找关于钱的任务")
-	IsDeleted   string // 软删除标志：逻辑删除，防止误删数据
-	CreatedAt   string // 任务创建时间
-	UpdatedAt   string // 任务最后更新时间
+	Id             string // 主键：任务唯一标识 (UUID)
+	UserId         string // 外键：归属用户 ID
+	Title          string // 任务标题：1-255 字符
+	Description    string // 任务详细描述：可选
+	Status         string // 任务状态：todo|doing|done|cancelled
+	Priority       string // 优先级：low|medium|high
+	DueDate        string // 截止时间：带时区
+	MilvusVectorId string // Milvus 向量 ID (UUID 类型，与 Milvus 主键对应)
+	TaskType       string // 任务类型：work|personal|project|adhoc
+	PriorityLevel  string // 优先级级别：HIGH|MEDIUM|LOW
+	IsDeleted      string // 软删除标记：true 表示已删除
+	CreatedAt      string // 任务创建时间
+	UpdatedAt      string // 任务最后更新时间
 }
 
 // dbTasksColumns holds the columns for the table db_tasks.
 var dbTasksColumns = DbTasksColumns{
-	Id:          "id",
-	UserId:      "user_id",
-	Title:       "title",
-	Description: "description",
-	Status:      "status",
-	Priority:    "priority",
-	DueDate:     "due_date",
-	ParentId:    "parent_id",
-	Meta:        "meta",
-	Embedding:   "embedding",
-	IsDeleted:   "is_deleted",
-	CreatedAt:   "created_at",
-	UpdatedAt:   "updated_at",
+	Id:             "id",
+	UserId:         "user_id",
+	Title:          "title",
+	Description:    "description",
+	Status:         "status",
+	Priority:       "priority",
+	DueDate:        "due_date",
+	MilvusVectorId: "milvus_vector_id",
+	TaskType:       "task_type",
+	PriorityLevel:  "priority_level",
+	IsDeleted:      "is_deleted",
+	CreatedAt:      "created_at",
+	UpdatedAt:      "updated_at",
 }
 
 // NewDbTasksDao creates and returns a new DAO object for table data access.
