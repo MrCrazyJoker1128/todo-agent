@@ -3,7 +3,7 @@
     <BaseHeader title="AI TODO Agent" />
 
     <div class="layout-body">
-      <TaskPanel> </TaskPanel>
+      <TaskPanel />
 
       <AIAssistant>
         <template #chat-messages>

@@ -8,42 +8,44 @@
         </el-tabs>
       </div>
       <div class="flex-1 w-full flex-col">
-        <div class="task-list-container">
-          <div class="content-filters">
-            <el-button
-              :type="filter === 'today' ? 'primary' : 'default'"
-              @click="filter = 'today'"
-            >
-              <i class="i-ep-calendar filter-icon"></i>
-              今日任务
-            </el-button>
-            <el-button
-              :type="filter === 'week' ? 'primary' : 'default'"
-              @click="filter = 'week'"
-            >
-              <i class="i-ep-date filter-icon"></i>
-              本周任务
-            </el-button>
-            <el-button
-              :type="filter === 'completed' ? 'primary' : 'default'"
-              @click="filter = 'completed'"
-            >
-              <i class="i-ep-circle-check filter-icon"></i>
-              已完成
-            </el-button>
-          </div>
-        </div>
-        <div class="task-list flex-1">
-          <slot name="task-list"></slot>
-        </div>
+        <CalendarPanel 
+          v-if="activeTab === 'calendar'" 
+          @task-click="handleTaskClick"
+        />
+        <ListPanel 
+          v-else 
+          ref="listPanelRef"
+        />
       </div>
     </div>
   </main>
 </template>
 
 <script setup lang="ts">
+import { ref } from "vue";
+import CalendarPanel from "../CalendarPanel/index.vue";
+import ListPanel from "../ListPanel/index.vue";
+
 const activeTab = ref("list");
-const filter = ref("today");
+const listPanelRef = ref<InstanceType<typeof ListPanel> | null>(null);
+
+interface Task {
+  id: string;
+  title: string;
+  deadline: string;
+  priority: "high" | "medium" | "low";
+  completed: boolean;
+}
+
+const handleTaskClick = (task: Task) => {
+  console.log("Task clicked:", task);
+};
+
+watch(activeTab, (newTab) => {
+  if (newTab === "list" && listPanelRef.value) {
+    listPanelRef.value.refresh();
+  }
+});
 </script>
 
 <style scoped lang="scss">
@@ -61,11 +63,9 @@ const filter = ref("today");
 
 .panel-header {
   flex: 1;
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(10px);
+  background: transparent;
   border-radius: 12px;
   padding: 16px;
-  box-shadow: 0 2px 12px rgba(255, 138, 128, 0.08);
   overflow: hidden;
 }
 
@@ -80,41 +80,5 @@ const filter = ref("today");
     height: 1px;
     background-color: rgba(255, 138, 128, 0.2);
   }
-}
-
-.task-list-container {
-  margin-top: 16px;
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(10px);
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 2px 12px rgba(255, 138, 128, 0.08);
-}
-
-.content-filters {
-  display: flex;
-  gap: 10px;
-
-  .el-button {
-    flex: 1;
-    height: 36px;
-    border-radius: 8px;
-    font-size: 13px;
-
-    .filter-icon {
-      margin-right: 4px;
-      font-size: 14px;
-    }
-  }
-}
-
-.task-list {
-  flex-direction: column;
-  gap: 12px;
-  overflow-y: auto;
-}
-
-.task-calendar {
-  min-height: 300px;
 }
 </style>
