@@ -38,6 +38,28 @@ type UpdateTaskRes struct {
 	Message string `json:"message"`
 }
 
+// 更新任务优先级
+type UpdateTaskPriorityReq struct {
+	g.Meta   `path:"/update-priority" method:"put" tags:"Task" summary:"更新任务优先级"`
+	ID       string `json:"id" binding:"required"`
+	Priority string `json:"priority" binding:"required"`
+}
+
+type UpdateTaskPriorityRes struct {
+	Message string `json:"message"`
+}
+
+// 更新任务状态
+type UpdateTaskStatusReq struct {
+	g.Meta `path:"/update-status" method:"put" tags:"Task" summary:"更新任务状态"`
+	ID     string `json:"id" binding:"required"`
+	Status string `json:"status" binding:"required"`
+}
+
+type UpdateTaskStatusRes struct {
+	Message string `json:"message"`
+}
+
 type GetTaskListReq struct {
 	g.Meta    `path:"/list" method:"get" tags:"Task" summary:"获取任务列表"`
 	StartTime string `json:"startTime" description:"任务开始时间"`

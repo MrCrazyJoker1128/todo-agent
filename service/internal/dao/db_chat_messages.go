@@ -5,7 +5,13 @@
 package dao
 
 import (
+	"context"
+	"service/api"
 	"service/internal/dao/internal"
+	"service/internal/model/entity"
+
+	"github.com/gogf/gf/v2/frame/g"
+	"github.com/google/uuid"
 )
 
 // dbChatMessagesDao is the data access object for the table db_chat_messages.
@@ -20,3 +26,87 @@ var (
 )
 
 // Add your custom methods and functionality below.
+
+func (d *dbChatMessagesDao) GetChatMessagesByUserId(ctx context.Context, userId string, req *api.GetChatListReq) ([]*entity.DbChatMessages, int, error) {
+	model := g.Model("db_chat_messages").
+		Where("user_id", userId).
+		Order("created_at asc")
+	total, err := model.Count()
+	if err != nil {
+		return nil, 0, err
+	}
+
+	model.Limit(req.PageSize).Offset((req.PageIndex - 1) * req.PageSize)
+	var chatMessages []*entity.DbChatMessages
+	err = model.Scan(&chatMessages)
+	if err != nil {
+		return nil, 0, err
+	}
+	return chatMessages, total, nil
+}
+
+func (d *dbChatMessagesDao) GetChatMessagesWithTask(ctx context.Context, userId string, req *api.GetChatListReq) ([]*api.ChatMessageWithTask, int, error) {
+	countModel := g.Model("db_chat_messages").
+		As("cm").
+		Where("cm.user_id = ?", userId)
+	total, err := countModel.Count()
+	if err != nil {
+		return nil, 0, err
+	}
+	if total == 0 {
+		return nil, 0, nil
+	}
+	model := g.Model("db_chat_messages").
+		As("cm").
+		LeftJoin("db_tasks t", "cm.related_task_id = t.id").
+		Fields("cm.id AS chatId, cm.role, cm.content AS chatContent, cm.related_task_id AS relatedTaskId, cm.created_at AS chatCreatedAt, t.id AS taskId, t.title, t.description, t.status, t.priority, t.due_date, t.task_type, t.priority_level, t.created_at AS taskCreatedAt, t.updated_at AS taskUpdatedAt").
+		Where("cm.user_id = ?", userId).
+		Order("cm.created_at asc")
+	if req.PageIndex != 0 && req.PageSize != 0 {
+		req.PageIndex = 1
+		offset := (req.PageIndex - 1) * req.PageSize
+		model.Limit(req.PageSize).Offset(offset)
+	}
+	var results []*api.ChatMessageWithTask
+	err = model.Scan(&results)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return results, total, nil
+}
+
+func (d *dbChatMessagesDao) InsertChatMessage(ctx context.Context, chatMessage *entity.DbChatMessages) error {
+	data := g.Map{
+		"id":      chatMessage.Id,
+		"user_id": chatMessage.UserId,
+		"content": chatMessage.Content,
+		"role":    chatMessage.Role,
+	}
+	if chatMessage.RelatedTaskId != uuid.Nil {
+		data["related_task_id"] = chatMessage.RelatedTaskId
+	} else {
+		data["related_task_id"] = nil
+	}
+	_, err := g.Model("db_chat_messages").Data(data).Insert()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// GetChatMessageById 根据ID获取聊天消息，返回关联的任务ID
+func (d *dbChatMessagesDao) GetChatMessageById(ctx context.Context, chatId uuid.UUID) (*entity.DbChatMessages, error) {
+	result, err := g.Model("db_chat_messages").
+		Where("id", chatId).
+		One()
+	if err != nil {
+		return nil, err
+	}
+	var chatMessage entity.DbChatMessages
+	err = result.Struct(&chatMessage)
+	if err != nil {
+		return nil, err
+	}
+	return &chatMessage, nil
+}

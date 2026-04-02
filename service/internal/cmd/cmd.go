@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"service/internal/middleware"
+	"service/internal/router/chat"
 	"service/internal/router/task"
 	"service/internal/router/user"
 
@@ -24,6 +25,7 @@ var (
 				group.Middleware(middleware.MiddlewareResponse)
 				user.RegisterRoutes(group)
 				task.RegisterRoutes(group)
+				chat.RegisterRoutes(group)
 			})
 			s.Run()
 			return nil

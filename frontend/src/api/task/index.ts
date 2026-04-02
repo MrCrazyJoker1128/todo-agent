@@ -9,6 +9,10 @@ import type {
   UpdateTaskRes,
   GetTaskListReq,
   GetTaskListRes,
+  UpdateTaskPriorityReq,
+  UpdateTaskPriorityRes,
+  UpdateTaskStatusReq,
+  UpdateTaskStatusRes,
 } from "./type";
 import type { IResult } from "@/types/type";
 
@@ -65,5 +69,21 @@ export function fetchGetTaskList(
 ): Promise<AxiosResponse<IResult<GetTaskListRes>>> {
   return service.get<GetTaskListRes>("/task/list", { params: req }) as unknown as Promise<
     AxiosResponse<IResult<GetTaskListRes>>
+  >;
+}
+
+export function fetchUpdateTaskPriority(
+  req: UpdateTaskPriorityReq,
+): Promise<AxiosResponse<IResult<UpdateTaskPriorityRes>>> {
+  return service.put<UpdateTaskPriorityRes>("/task/update-priority", req) as unknown as Promise<
+    AxiosResponse<IResult<UpdateTaskPriorityRes>>
+  >;
+}
+
+export function fetchUpdateTaskStatus(
+  req: UpdateTaskStatusReq,
+): Promise<AxiosResponse<IResult<UpdateTaskStatusRes>>> {
+  return service.put<UpdateTaskStatusRes>("/task/update-status", req) as unknown as Promise<
+    AxiosResponse<IResult<UpdateTaskStatusRes>>
   >;
 }

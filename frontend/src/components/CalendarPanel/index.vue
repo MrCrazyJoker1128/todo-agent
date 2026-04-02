@@ -4,216 +4,224 @@
       <el-icon class="is-loading"><i class="i-ep-loading"></i></el-icon>
       <span>加载中...</span>
     </div>
-    
-    <template v-else>
-      <div class="calendar-header">
-        <div class="calendar-nav">
-          <el-button text @click="prevMonth">
-            <i class="i-ep-arrow-left"></i>
-          </el-button>
-          <span class="current-date">{{ currentYear }}年 {{ currentMonth + 1 }}月</span>
-          <el-button text @click="nextMonth">
-            <i class="i-ep-arrow-right"></i>
-          </el-button>
-        </div>
-        <el-button size="small" @click="goToToday">今天</el-button>
-      </div>
-
-      <div class="calendar-weekdays">
-        <div v-for="day in weekdays" :key="day" class="weekday">{{ day }}</div>
-      </div>
-
-      <div class="calendar-grid">
+    <el-calendar v-else v-model="currentMonth">
+      <template #date-cell="{ data }">
         <div
-          v-for="(day, index) in calendarDays"
-          :key="index"
           class="calendar-cell"
           :class="{
-            'other-month': !day.isCurrentMonth,
-            'today': day.isToday,
-            'has-tasks': day.tasks.length > 0
+            'is-selected': data.day === selectedDate,
+            'is-today': data.day === todayStr,
+            'other-month':
+              data.type === 'prev-month' || data.type === 'next-month',
+          }"
+          @click="handleDateClick(data.day)"
+        >
+          <span class="day-number">{{
+            data.day.split("-").slice(2).join("")
+          }}</span>
+          <div class="task-list">
+            <template v-if="getFirstTaskForDate(data.day)">
+              <div
+                class="task-chip"
+                @click.stop="handleTaskClick(getFirstTaskForDate(data.day)!)"
+              >
+                <span class="task-name">{{
+                  getFirstTaskForDate(data.day)!.title
+                }}</span>
+              </div>
+            </template>
+          </div>
+        </div>
+      </template>
+    </el-calendar>
+
+    <div class="tasks-section" ref="tasksSectionRef">
+      <div class="tasks-header" ref="tasksHeaderRef">
+        <span class="tasks-title">{{ formatSelectedDate(selectedDate) }}</span>
+        <span class="tasks-count">{{ selectedDateTasks.length }} 个任务</span>
+      </div>
+      <div v-if="selectedDateTasks.length === 0" class="empty-state">
+        暂无任务
+      </div>
+      <el-scrollbar
+        v-else
+        class="tasks-scrollbar"
+        :height="scrollbarHeight + 'px'"
+        max-height="200px"
+      >
+        <div
+          v-for="task in selectedDateTasks"
+          :key="task.id"
+          class="task-item"
+          :class="{
+            done: task.status === 'done',
+            cancelled: task.status === 'cancelled',
           }"
         >
-          <span class="day-number">{{ day.date }}</span>
-          <div class="task-list">
-            <div
-              v-for="task in day.tasks.slice(0, 3)"
-              :key="task.id"
-              class="task-chip"
-              :class="[`priority-${task.priority}`, { completed: task.completed }]"
-              @click="handleTaskClick(task)"
-            >
-              <span class="task-chip-title">{{ task.title }}</span>
+          <div class="task-main">
+            <div class="task-left">
+              <div class="task-info">
+                <div class="task-title-row">
+                  <span
+                    class="task-item-title"
+                    :class="{ completed: task.status === 'done' }"
+                    >{{ task.title }}</span
+                  >
+                  <el-tag
+                    :type="getPriorityTagType(task.priority)"
+                    size="small"
+                    effect="plain"
+                    >{{ getPriorityLabel(task.priority) }}</el-tag
+                  >
+                  <el-tag size="small" effect="plain">{{
+                    getTaskTypeLabel(task.taskType)
+                  }}</el-tag>
+                </div>
+                <div class="task-meta">
+                  <span class="deadline">
+                    <i class="i-ep-time"></i>
+                    {{ task.deadline }}
+                  </span>
+                </div>
+              </div>
             </div>
-            <div v-if="day.tasks.length > 3" class="more-tasks">
-              +{{ day.tasks.length - 3 }} 更多
+            <div class="task-actions">
+              <template v-if="task.status === 'todo'">
+                <el-button
+                  size="small"
+                  type="primary"
+                  @click="handleStart(task)"
+                >
+                  <i class="i-ep-video-play"></i>
+                  开始
+                </el-button>
+                <el-button
+                  size="small"
+                  type="info"
+                  plain
+                  @click="handleCancel(task)"
+                >
+                  <i class="i-ep-close"></i>
+                  取消
+                </el-button>
+              </template>
+              <template v-else-if="task.status === 'doing'">
+                <el-button
+                  size="small"
+                  type="success"
+                  @click="handleDone(task)"
+                >
+                  <i class="i-ep-check"></i>
+                  完成
+                </el-button>
+                <el-button
+                  size="small"
+                  type="info"
+                  plain
+                  @click="handleCancel(task)"
+                >
+                  <i class="i-ep-close"></i>
+                  取消
+                </el-button>
+              </template>
+              <template v-else-if="task.status === 'done'">
+                <el-tag type="success" size="small" effect="plain">
+                  <i class="i-ep-circle-check"></i>
+                  已完成
+                </el-tag>
+              </template>
+              <template v-else-if="task.status === 'cancelled'">
+                <el-tag type="info" size="small" effect="plain">
+                  <i class="i-ep-remove"></i>
+                  已取消
+                </el-tag>
+              </template>
             </div>
           </div>
         </div>
-      </div>
-    </template>
+      </el-scrollbar>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
-import { ElMessage } from "element-plus";
-import { fetchGetTaskList } from "@/api/task";
-import type { TaskItem as ApiTaskItem } from "@/api/task/type";
-
-interface Task {
-  id: string;
-  title: string;
-  deadline: string;
-  priority: "high" | "medium" | "low";
-  completed: boolean;
-}
-
-interface CalendarDay {
-  date: number;
-  isCurrentMonth: boolean;
-  isToday: boolean;
-  tasks: Task[];
-}
+import { watch, onMounted } from "vue";
+import {
+  useTask,
+  useTaskDisplay,
+  useScrollbarHeight,
+  useCalendar,
+  type Task,
+} from "./hooks";
+import eventBus from "@/utils/eventbus";
 
 const emit = defineEmits<{
   (e: "task-click", task: Task): void;
 }>();
 
-const tasks = ref<Task[]>([]);
-const loading = ref(false);
+const { currentMonth, selectedDate, todayStr } = useCalendar();
 
-const weekdays = ["日", "一", "二", "三", "四", "五", "六"];
+const {
+  selectedDateTasks,
+  loading,
+  getFirstTaskForDate,
+  fetchTasks,
+  fetchTasksForDate,
+  handleStart,
+  handleDone,
+  handleCancel,
+} = useTask();
 
-const today = new Date();
-const currentYear = ref(today.getFullYear());
-const currentMonth = ref(today.getMonth());
+const {
+  getTaskTypeLabel,
+  getPriorityLabel,
+  getPriorityTagType,
+  formatSelectedDate,
+} = useTaskDisplay();
 
-const prevMonth = () => {
-  if (currentMonth.value === 0) {
-    currentMonth.value = 11;
-    currentYear.value--;
-  } else {
-    currentMonth.value--;
-  }
+const { scrollbarHeight, calculateScrollbarHeight } = useScrollbarHeight();
+
+const handleDateClick = async (date: string) => {
+  selectedDate.value = date;
+  await fetchTasksForDate(date);
+  calculateScrollbarHeight();
 };
-
-const nextMonth = () => {
-  if (currentMonth.value === 11) {
-    currentMonth.value = 0;
-    currentYear.value++;
-  } else {
-    currentMonth.value++;
-  }
-};
-
-const goToToday = () => {
-  currentYear.value = today.getFullYear();
-  currentMonth.value = today.getMonth();
-};
-
-const getDaysInMonth = (year: number, month: number) => {
-  return new Date(year, month + 1, 0).getDate();
-};
-
-const getFirstDayOfMonth = (year: number, month: number) => {
-  return new Date(year, month, 1).getDay();
-};
-
-const isSameDate = (d1: Date, d2: Date) => {
-  return (
-    d1.getFullYear() === d2.getFullYear() &&
-    d1.getMonth() === d2.getMonth() &&
-    d1.getDate() === d2.getDate()
-  );
-};
-
-const calendarDays = computed<CalendarDay[]>(() => {
-  const daysInMonth = getDaysInMonth(currentYear.value, currentMonth.value);
-  const firstDay = getFirstDayOfMonth(currentYear.value, currentMonth.value);
-  const daysInPrevMonth = getDaysInMonth(
-    currentMonth.value === 0 ? currentYear.value - 1 : currentYear.value,
-    currentMonth.value === 0 ? 11 : currentMonth.value - 1
-  );
-
-  const days: CalendarDay[] = [];
-
-  for (let i = firstDay - 1; i >= 0; i--) {
-    const date = daysInPrevMonth - i;
-    const prevMonthVal = currentMonth.value === 0 ? 11 : currentMonth.value - 1;
-    const prevYear = currentMonth.value === 0 ? currentYear.value - 1 : currentYear.value;
-    const fullDate = `${prevYear}-${String(prevMonthVal + 1).padStart(2, "0")}-${String(date).padStart(2, "0")}`;
-    days.push({
-      date,
-      isCurrentMonth: false,
-      isToday: false,
-      tasks: tasks.value.filter((t) => t.deadline === fullDate),
-    });
-  }
-
-  for (let date = 1; date <= daysInMonth; date++) {
-    const fullDate = `${currentYear.value}-${String(currentMonth.value + 1).padStart(2, "0")}-${String(date).padStart(2, "0")}`;
-    days.push({
-      date,
-      isCurrentMonth: true,
-      isToday: isSameDate(
-        new Date(currentYear.value, currentMonth.value, date),
-        today
-      ),
-      tasks: tasks.value.filter((t) => t.deadline === fullDate),
-    });
-  }
-
-  const remainingDays = 42 - days.length;
-  for (let date = 1; date <= remainingDays; date++) {
-    const nextMonthVal = currentMonth.value === 11 ? 0 : currentMonth.value + 1;
-    const nextYear = currentMonth.value === 11 ? currentYear.value + 1 : currentYear.value;
-    const fullDate = `${nextYear}-${String(nextMonthVal + 1).padStart(2, "0")}-${String(date).padStart(2, "0")}`;
-    days.push({
-      date,
-      isCurrentMonth: false,
-      isToday: false,
-      tasks: tasks.value.filter((t) => t.deadline === fullDate),
-    });
-  }
-
-  return days;
-});
 
 const handleTaskClick = (task: Task) => {
   emit("task-click", task);
 };
 
-const fetchTasks = async () => {
-  loading.value = true;
-  try {
-    const res = await fetchGetTaskList();
-    const apiTasks = res.data.data?.tasks || [];
-    tasks.value = apiTasks.map((t: ApiTaskItem) => ({
-      id: t.id,
-      title: t.title,
-      deadline: t.dueDate,
-      priority: t.priority as "high" | "medium" | "low",
-      completed: t.status === "completed",
-    }));
-  } catch (error) {
-    ElMessage.error("获取任务列表失败");
-  } finally {
-    loading.value = false;
-  }
-};
+watch(
+  selectedDateTasks,
+  () => {
+    calculateScrollbarHeight();
+  },
+  { flush: "post" },
+);
 
 onMounted(() => {
-  fetchTasks();
+  fetchTasks(currentMonth.value);
+  selectedDate.value = todayStr;
+  handleDateClick(todayStr);
+  calculateScrollbarHeight();
 });
+eventBus.on("sseComplete", () => {
+  refresh();
+});
+const refresh = () => {
+  fetchTasks(currentMonth.value);
+};
 
 defineExpose({
-  refresh: fetchTasks,
+  refresh,
 });
 </script>
 
 <style scoped lang="scss">
 .calendar-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(10px);
   border-radius: 12px;
@@ -235,82 +243,72 @@ defineExpose({
   }
 }
 
-.calendar-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
+:deep(.el-calendar) {
+  border: none;
 
-  .calendar-nav {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+  .el-calendar__header {
+    padding: 12px 16px;
+    border-bottom: none;
+  }
 
-    .current-date {
-      font-size: 16px;
-      font-weight: 600;
-      color: #303133;
-      min-width: 140px;
-      text-align: center;
+  .el-calendar__body {
+    padding: 8px;
+  }
+
+  .el-calendar-table__header {
+    th {
+      padding: 8px 0;
+      color: #909399;
+      font-weight: 500;
+      border: none;
     }
   }
-}
 
-.calendar-weekdays {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  margin-bottom: 8px;
+  .el-calendar-table__body {
+    td {
+      border: 1px solid rgba(255, 138, 128, 0.08);
+      transition: all 0.2s ease;
+      cursor: pointer;
+      vertical-align: top;
 
-  .weekday {
-    text-align: center;
-    font-size: 12px;
-    font-weight: 500;
-    color: #909399;
-    padding: 8px 0;
+      &.prev-month,
+      &.next-month {
+        .day-number {
+          color: #c0c4cc;
+        }
+      }
+
+      &.today {
+        .day-number {
+          color: rgba(255, 138, 128, 1);
+          font-weight: 700;
+        }
+      }
+
+      &.is-selected {
+        background: rgba(255, 138, 128, 0.15);
+      }
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.8);
+      }
+    }
   }
-}
-
-.calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  grid-template-rows: repeat(6, 1fr);
-  gap: 4px;
 }
 
 .calendar-cell {
-  min-height: 80px;
+  min-height: 70px;
   padding: 6px;
-  background: rgba(255, 255, 255, 0.5);
   border-radius: 8px;
-  border: 1px solid rgba(255, 138, 128, 0.1);
+  background: rgba(255, 255, 255, 0.5);
   transition: all 0.2s ease;
-  overflow: hidden;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.8);
-    box-shadow: 0 2px 8px rgba(255, 138, 128, 0.12);
-  }
 
   &.other-month {
     background: rgba(255, 255, 255, 0.25);
-
-    .day-number {
-      color: #c0c4cc;
-    }
   }
 
-  &.today {
-    border-color: rgba(255, 138, 128, 0.5);
+  &.is-today {
     background: rgba(255, 138, 128, 0.08);
-
-    .day-number {
-      color: rgba(255, 138, 128, 1);
-      font-weight: 700;
-    }
-  }
-
-  &.has-tasks {
-    background: rgba(255, 255, 255, 0.9);
   }
 
   .day-number {
@@ -329,47 +327,27 @@ defineExpose({
 }
 
 .task-chip {
-  padding: 2px 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
   border-radius: 4px;
-  font-size: 10px;
+  font-size: 11px;
   cursor: pointer;
   transition: all 0.2s;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.8);
 
-  &.priority-high {
-    background: rgba(245, 108, 108, 0.15);
-    color: #f56c6c;
-    border-left: 2px solid #f56c6c;
-  }
-
-  &.priority-medium {
-    background: rgba(230, 162, 60, 0.15);
-    color: #e6a23c;
-    border-left: 2px solid #e6a23c;
-  }
-
-  &.priority-low {
-    background: rgba(103, 194, 58, 0.15);
-    color: #67c23a;
-    border-left: 2px solid #67c23a;
-  }
-
-  &.completed {
-    opacity: 0.5;
-    text-decoration: line-through;
+  .task-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    font-weight: 500;
   }
 
   &:hover {
-    transform: translateX(2px);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-  }
-
-  .task-chip-title {
-    display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    background: rgba(255, 255, 255, 1);
   }
 }
 
@@ -378,5 +356,142 @@ defineExpose({
   color: #909399;
   padding: 2px 6px;
   text-align: center;
+}
+
+.tasks-section {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tasks-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+
+  .tasks-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #303133;
+  }
+
+  .tasks-count {
+    font-size: 12px;
+    color: #909399;
+    background: rgba(255, 138, 128, 0.1);
+    padding: 4px 10px;
+    border-radius: 12px;
+  }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 24px;
+  color: #909399;
+  font-size: 13px;
+}
+
+.tasks-scrollbar {
+  flex: 1;
+  min-height: 0;
+}
+
+.task-item {
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 138, 128, 0.2);
+  transition: all 0.3s;
+
+  &:hover {
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  &.done {
+    opacity: 0.7;
+    background: rgba(103, 194, 58, 0.05);
+    border-color: rgba(103, 194, 58, 0.2);
+  }
+
+  &.cancelled {
+    opacity: 0.6;
+    background: rgba(144, 147, 153, 0.05);
+    border-color: rgba(144, 147, 153, 0.2);
+  }
+}
+
+.task-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.task-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.task-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.task-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.task-item-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #303133;
+
+  &.completed {
+    text-decoration: line-through;
+    color: #909399;
+  }
+}
+
+.task-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.deadline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #909399;
+
+  i {
+    font-size: 12px;
+  }
+}
+
+.task-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+
+  :deep(.el-button) {
+    padding: 6px 8px;
+    min-width: 28px;
+  }
 }
 </style>

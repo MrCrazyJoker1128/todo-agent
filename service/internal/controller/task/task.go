@@ -160,6 +160,44 @@ func (c *TaskController) UpdateTask(ctx context.Context, req *api.UpdateTaskReq)
 	}, nil
 }
 
+func (c *TaskController) UpdateTaskPriority(ctx context.Context, req *api.UpdateTaskPriorityReq) (res *api.UpdateTaskPriorityRes, err error) {
+	if req.ID == "" {
+		return nil, errors.New("任务ID不能为空")
+	}
+	if req.Priority == "" {
+		return nil, errors.New("优先级不能为空")
+	}
+
+	err = dao.DbTasks.UpdateTaskPriority(ctx, req.ID, req.Priority)
+	if err != nil {
+		g.Log().Error(ctx, "更新任务优先级失败: ", err)
+		return nil, err
+	}
+
+	return &api.UpdateTaskPriorityRes{
+		Message: "优先级更新成功",
+	}, nil
+}
+
+func (c *TaskController) UpdateTaskStatus(ctx context.Context, req *api.UpdateTaskStatusReq) (res *api.UpdateTaskStatusRes, err error) {
+	if req.ID == "" {
+		return nil, errors.New("任务ID不能为空")
+	}
+	if req.Status == "" {
+		return nil, errors.New("状态不能为空")
+	}
+
+	err = dao.DbTasks.UpdateTaskStatus(ctx, req.ID, req.Status)
+	if err != nil {
+		g.Log().Error(ctx, "更新任务状态失败: ", err)
+		return nil, err
+	}
+
+	return &api.UpdateTaskStatusRes{
+		Message: "状态更新成功",
+	}, nil
+}
+
 func (c *TaskController) GetTaskList(ctx context.Context, req *api.GetTaskListReq) (res *api.GetTaskListRes, err error) {
 	r := g.RequestFromCtx(ctx)
 	userId := r.GetParam("userId").String()

@@ -56,9 +56,13 @@ func (dao *dbTasksDao) InsertTask(ctx context.Context, task *entity.DbTasks) (gd
 
 // 删除任务
 func (dao *dbTasksDao) DeleteTask(ctx context.Context, taskId string) error {
-	_, err := g.Model("db_tasks").Data(map[string]any{
+	taskUUID, err := uuid.Parse(taskId)
+	if err != nil {
+		return err
+	}
+	_, err = g.Model("db_tasks").Data(map[string]any{
 		"is_deleted": true,
-	}).Where("id", taskId).Update()
+	}).Where("id", taskUUID).Update()
 	return err
 }
 
@@ -89,13 +93,43 @@ func (dao *dbTasksDao) UpdateTask(ctx context.Context, task *entity.DbTasks) (gd
 
 // 根据id获取任务
 func (dao *dbTasksDao) GetTask(ctx context.Context, taskId string) (*entity.DbTasks, error) {
-	result, err := g.Model("db_tasks").Where("id", taskId).One()
+	taskUUID, err := uuid.Parse(taskId)
+	if err != nil {
+		return nil, err
+	}
+	result, err := g.Model("db_tasks").Where("id", taskUUID).One()
 	if err != nil {
 		return nil, err
 	}
 	var task entity.DbTasks
 	err = result.Struct(&task)
 	return &task, nil
+}
+
+// 更新任务优先级
+func (dao *dbTasksDao) UpdateTaskPriority(ctx context.Context, taskId string, priority string) error {
+	taskUUID, err := uuid.Parse(taskId)
+	if err != nil {
+		return err
+	}
+	_, err = g.Model("db_tasks").Data(g.Map{
+		"priority":   priority,
+		"updated_at": gtime.Now(),
+	}).Where("id", taskUUID).Update()
+	return err
+}
+
+// 更新任务状态
+func (dao *dbTasksDao) UpdateTaskStatus(ctx context.Context, taskId string, status string) error {
+	taskUUID, err := uuid.Parse(taskId)
+	if err != nil {
+		return err
+	}
+	_, err = g.Model("db_tasks").Data(g.Map{
+		"status":     status,
+		"updated_at": gtime.Now(),
+	}).Where("id", taskUUID).Update()
+	return err
 }
 
 // 获取任务列表
@@ -112,7 +146,7 @@ func (dao *dbTasksDao) GetTaskList(ctx context.Context, req *api.GetTaskListReq,
 		model = model.Where("task_type = ?", req.TaskType)
 	}
 	if req.Priority != "" {
-		model = model.Where("priority = ?", req.Priority)
+		model = model.Where("LOWER(priority) = ?", req.Priority)
 	}
 	if req.Status != "" {
 		model = model.Where("status = ?", req.Status)
@@ -125,4 +159,22 @@ func (dao *dbTasksDao) GetTaskList(ctx context.Context, req *api.GetTaskListReq,
 	}
 
 	return tasks, nil
+}
+
+// GetLatestTaskByUserId 获取用户最近创建的任务
+func (dao *dbTasksDao) GetLatestTaskByUserId(ctx context.Context, userId uuid.UUID) (*entity.DbTasks, error) {
+	result, err := g.Model("db_tasks").
+		Where("user_id", userId).
+		Where("is_deleted = ?", false).
+		Order("created_at desc").
+		One()
+	if err != nil {
+		return nil, err
+	}
+	var task entity.DbTasks
+	err = result.Struct(&task)
+	if err != nil {
+		return nil, err
+	}
+	return &task, nil
 }

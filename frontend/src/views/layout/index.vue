@@ -23,14 +23,18 @@ interface Task {
   title: string;
   deadline: string;
   priority: "high" | "medium" | "low";
-  completed: boolean;
+  taskType: string;
+  status: "todo" | "doing" | "done" | "cancelled";
 }
 
 interface TaskDetail {
+  id: string;
   title: string;
-  time: string;
-  priority: "高" | "中" | "低";
-  tags: string[];
+  dueDate: string;
+  priority: "high" | "medium" | "low";
+  taskType: string;
+  status: "todo" | "doing" | "done" | "cancelled";
+  description?: string;
 }
 
 const taskList = ref<Task[]>([
@@ -39,35 +43,42 @@ const taskList = ref<Task[]>([
     title: "整理会议纪要",
     deadline: "今天 18:00",
     priority: "high",
-    completed: false,
+    taskType: "工作",
+    status: "todo",
   },
   {
     id: "2",
-    title: "整理会议纪要",
+    title: "回复邮件",
     deadline: "今天 18:00",
     priority: "medium",
-    completed: false,
+    taskType: "日常",
+    status: "doing",
   },
   {
     id: "3",
-    title: "整理会议纪要",
+    title: "阅读文档",
     deadline: "今天 18:00",
     priority: "low",
-    completed: false,
+    taskType: "学习",
+    status: "todo",
   },
   {
     id: "4",
-    title: "整理会议纪要",
+    title: "代码审查",
     deadline: "今天 18:00",
     priority: "medium",
-    completed: false,
+    taskType: "工作",
+    status: "done",
   },
 ]);
 
 const currentTask = ref<TaskDetail>({
+  id: "test-1",
   title: "整理会议纪要",
-  time: "明天 10:00",
-  priority: "高",
-  tags: ["工作", "会议"],
+  dueDate: "2026-03-30 18:00",
+  priority: "high",
+  taskType: "工作",
+  status: "todo",
+  description: "会议结束后整理并发送给相关人员",
 });
 </script>

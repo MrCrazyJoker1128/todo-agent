@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"strings"
 
 	"service/internal/utility"
@@ -59,7 +60,19 @@ func MiddlewareAuth(r *ghttp.Request) {
 		})
 		r.Exit()
 	}
-
 	r.SetParam("userId", claims.UserId)
+	ctx := r.Context()
+	ctx = context.WithValue(ctx, "user_id", claims.UserId)
+	// 5. 将新 context 设置回 Request
+	r.SetCtx(ctx)
 	r.Middleware.Next()
+}
+
+// 从 Go context 获取 user_id（Tool 层使用）
+func GetUserIDFromContext(ctx context.Context) string {
+	userID, ok := ctx.Value("user_id").(string)
+	if !ok {
+		return ""
+	}
+	return userID
 }

@@ -22,11 +22,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, watch } from "vue";
+import { storeToRefs } from "pinia";
 import CalendarPanel from "../CalendarPanel/index.vue";
 import ListPanel from "../ListPanel/index.vue";
+import { useTaskPanelStore } from "@/store/taskPanel";
 
-const activeTab = ref("list");
+const taskPanelStore = useTaskPanelStore();
+const { activeTab } = storeToRefs(taskPanelStore);
 const listPanelRef = ref<InstanceType<typeof ListPanel> | null>(null);
 
 interface Task {
@@ -34,7 +37,8 @@ interface Task {
   title: string;
   deadline: string;
   priority: "high" | "medium" | "low";
-  completed: boolean;
+  taskType: string;
+  status: "todo" | "doing" | "done" | "cancelled";
 }
 
 const handleTaskClick = (task: Task) => {
@@ -67,6 +71,9 @@ watch(activeTab, (newTab) => {
   border-radius: 12px;
   padding: 16px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .content-tabs {

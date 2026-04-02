@@ -39,25 +39,6 @@ checkUserInfo();
   height: 100vh;
   background: linear-gradient(135deg, #fff5f5 0%, #fff0ed 40%, #ffe8e6 100%);
   position: relative;
-  overflow: hidden;
-
-  &::before {
-    content: "";
-    position: absolute;
-    top: -30%;
-    left: -30%;
-    width: 160%;
-    height: 160%;
-    background: radial-gradient(
-      circle,
-      rgba(255, 138, 128, 0.1) 0%,
-      rgba(255, 138, 128, 0.03) 40%,
-      transparent 70%
-    );
-    animation: float 20s ease-in-out infinite;
-    pointer-events: none;
-    z-index: 0;
-  }
 }
 
 @keyframes float {

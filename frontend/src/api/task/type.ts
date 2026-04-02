@@ -11,9 +11,9 @@ export type Priority = "high" | "medium" | "low";
 
 /**
  * 任务状态
- * @type {"pending" | "in_progress" | "completed"}
+ * @type {"todo" | "doing" | "done" | "cancelled"}
  */
-export type TaskStatus = "pending" | "in_progress" | "completed";
+export type TaskStatus = "todo" | "doing" | "done" | "cancelled";
 
 /**
  * 任务类型
@@ -242,9 +242,25 @@ export interface TaskItem {
  * @interface GetTaskListRes
  */
 export interface GetTaskListRes {
-  /**
-   * 任务列表
-   * @type {TaskItem[]}
-   */
   tasks: TaskItem[];
+}
+
+// 更新任务优先级
+export interface UpdateTaskPriorityReq {
+  id: string;
+  priority: Priority;
+}
+
+export interface UpdateTaskPriorityRes {
+  message: string;
+}
+
+// 更新任务状态
+export interface UpdateTaskStatusReq {
+  id: string;
+  status: TaskStatus;
+}
+
+export interface UpdateTaskStatusRes {
+  message: string;
 }

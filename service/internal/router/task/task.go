@@ -12,6 +12,8 @@ func RegisterRoutes(group *ghttp.RouterGroup) {
 		group.POST("/create", taskController.CreateTask)
 		group.DELETE("/delete", taskController.DeleteTask)
 		group.PUT("/update", taskController.UpdateTask)
+		group.PUT("/update-priority", taskController.UpdateTaskPriority)
+		group.PUT("/update-status", taskController.UpdateTaskStatus)
 		group.GET("/list", taskController.GetTaskList)
 	})
 }
