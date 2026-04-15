@@ -40,6 +40,8 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/eino-contrib/jsonschema v1.0.3 // indirect
+	github.com/elastic/elastic-transport-go/v8 v8.8.0 // indirect
+	github.com/elastic/go-elasticsearch/v8 v8.19.3 // indirect
 	github.com/emirpasic/gods/v2 v2.0.0-alpha // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect

@@ -6,6 +6,10 @@
 
     <div class="chat-messages flex-1" v-loading="loading">
       <BubbleList :list="bubbleList" ref="bubbleListRef">
+        <template #avatar="{ item }">
+          <el-icon v-show="item.placement === 'end'"><UserFilled /></el-icon>
+          <el-icon v-show="item.placement === 'start'"><Monitor /></el-icon>
+        </template>
         <template #footer="{ item }">
           <div>{{ item.createdAt }}</div>
           <div
@@ -49,7 +53,7 @@
 </template>
 
 <script setup lang="ts">
-import { Delete, Check } from "@element-plus/icons-vue";
+import { Delete, Check, UserFilled, Monitor } from "@element-plus/icons-vue";
 import { EditorSender, BubbleList } from "vue-element-plus-x";
 import { useChatList, useSendChatMessage, bubbleList } from "./hooks";
 import type {
@@ -73,6 +77,7 @@ const customTagsArr = ref<CustomTag[]>([
       { id: "add-task", name: "添加任务" },
       { id: "delete-task", name: "删除任务" },
       { id: "query-task", name: "查询任务" },
+      { id: "add-knowledge", name: "添加知识库" },
     ],
   },
 ]);

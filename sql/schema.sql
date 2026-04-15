@@ -7,6 +7,7 @@
 
 -- 启用扩展
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- =============================================================================
 -- 1. 删除现有表（级联删除）
@@ -142,6 +143,8 @@ CREATE INDEX idx_db_tasks_due_date ON db_tasks(due_date);
 CREATE INDEX idx_db_tasks_deleted ON db_tasks(is_deleted) WHERE is_deleted = FALSE;
 CREATE INDEX idx_db_tasks_milvus_id ON db_tasks(milvus_vector_id);
 CREATE INDEX idx_db_tasks_type ON db_tasks(task_type);
+CREATE INDEX idx_db_tasks_title_trgm ON db_tasks USING gin (title gin_trgm_ops);
+CREATE INDEX idx_db_tasks_desc_trgm ON db_tasks USING gin (description gin_trgm_ops);
 
 -- 聊天消息表索引
 CREATE INDEX idx_db_messages_user_id ON db_chat_messages(user_id);
@@ -156,6 +159,8 @@ COMMENT ON INDEX idx_db_tasks_due_date IS '按截止时间排序';
 COMMENT ON INDEX idx_db_tasks_deleted IS '查询未删除任务（部分索引，性能优化）';
 COMMENT ON INDEX idx_db_tasks_milvus_id IS '按 Milvus 向量 ID 查询（UUID 类型）';
 COMMENT ON INDEX idx_db_tasks_type IS '按任务类型筛选';
+COMMENT ON INDEX idx_db_tasks_title_trgm IS '任务标题模糊搜索索引（pg_trgm）';
+COMMENT ON INDEX idx_db_tasks_desc_trgm IS '任务描述模糊搜索索引（pg_trgm）';
 COMMENT ON INDEX idx_db_messages_user_id IS '按用户查询消息';
 COMMENT ON INDEX idx_db_messages_task_id IS '按关联任务查询消息';
 COMMENT ON INDEX idx_db_messages_created_at IS '按时间排序消息';
