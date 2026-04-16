@@ -120,7 +120,7 @@ func (k *KnowledgeController) AddKnowledge(ctx context.Context, req *api.AddKnow
 	embedder, err := ollama.NewEmbedder(ctx, &ollama.EmbeddingConfig{
 		BaseURL: "http://localhost:11434",
 		Model:   "qwen3-embedding:8b",
-		Timeout: 30 * time.Second,
+		Timeout: 120 * time.Second,
 	})
 	if err != nil {
 		g.Log().Error(ctx, "create embedder failed: %v", err)
@@ -138,7 +138,7 @@ func (k *KnowledgeController) AddKnowledge(ctx context.Context, req *api.AddKnow
 	esIndexer, err := es8.NewIndexer(ctx, &es8.IndexerConfig{
 		Client:    esClient,
 		Index:     "knowledge_chunks",
-		BatchSize: 10,
+		BatchSize: 1,
 		DocumentToFields: func(ctx context.Context, doc *schema.Document) (map[string]es8.FieldValue, error) {
 			metadata := doc.MetaData
 			return map[string]es8.FieldValue{
@@ -166,7 +166,7 @@ func (k *KnowledgeController) AddKnowledge(ctx context.Context, req *api.AddKnow
 			"userId":     userId.String(),
 			"chunkIndex": i,
 			"author":     contentData.Author,
-			"uploadTime": now.String(),
+			"uploadTime": now.Format("2006-01-02T15:04:05Z"),
 			"title":      contentData.Title,
 		}
 		metadataJSON, _ := json.Marshal(metadata)
