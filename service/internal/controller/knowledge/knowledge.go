@@ -166,7 +166,7 @@ func (k *KnowledgeController) AddKnowledge(ctx context.Context, req *api.AddKnow
 			"userId":     userId.String(),
 			"chunkIndex": i,
 			"author":     contentData.Author,
-			"uploadTime": now.Format("2006-01-02T15:04:05Z"),
+			"uploadTime": now.Time.Format("2006-01-02T15:04:05Z"),
 			"title":      contentData.Title,
 		}
 		metadataJSON, _ := json.Marshal(metadata)
@@ -212,6 +212,11 @@ func (k *KnowledgeController) AddKnowledge(ctx context.Context, req *api.AddKnow
 		Id: urlId,
 	}
 	return res, nil
+}
+
+func (k *KnowledgeController) GetKnowledgeList(ctx context.Context, req *api.GetKnowledgeListReq) (res *api.GetKnowledgeListRes, err error) {
+
+	return nil, nil
 }
 
 func updateUrlStatus(ctx context.Context, urlId uuid.UUID, status, errMsg string) {

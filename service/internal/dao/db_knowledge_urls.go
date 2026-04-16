@@ -6,6 +6,7 @@ package dao
 
 import (
 	"context"
+	"service/api"
 	"service/internal/dao/internal"
 	"service/internal/model/entity"
 )
@@ -46,4 +47,9 @@ func (dao *dbKnowledgeUrlsDao) GetUrlsByUserID(ctx context.Context, userId strin
 	err := dao.Ctx(ctx).Where("user_id = ? AND is_deleted = false", userId).
 		OrderDesc("created_at").Offset(offset).Limit(limit).Scan(&results)
 	return results, err
+}
+
+func (dao *dbKnowledgeUrlsDao) GetKnowledgeList(ctx context.Context, req *api.GetKnowledgeListReq) (*api.GetKnowledgeListRes, error) {
+
+	return nil, err
 }
