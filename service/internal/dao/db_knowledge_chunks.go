@@ -5,18 +5,44 @@
 package dao
 
 import (
+	"context"
 	"service/internal/dao/internal"
+	"service/internal/model/entity"
 )
 
-// dbKnowledgeChunksDao is the data access object for the table db_knowledge_chunks.
-// You can define custom methods on it to extend its functionality as needed.
 type dbKnowledgeChunksDao struct {
 	*internal.DbKnowledgeChunksDao
 }
 
 var (
-	// DbKnowledgeChunks is a globally accessible object for table db_knowledge_chunks operations.
 	DbKnowledgeChunks = dbKnowledgeChunksDao{internal.NewDbKnowledgeChunksDao()}
 )
 
-// Add your custom methods and functionality below.
+func (dao *dbKnowledgeChunksDao) InsertChunk(ctx context.Context, chunk *entity.DbKnowledgeChunks) error {
+	_, err := dao.Ctx(ctx).Data(chunk).Insert()
+	return err
+}
+
+func (dao *dbKnowledgeChunksDao) InsertChunks(ctx context.Context, chunks []*entity.DbKnowledgeChunks) error {
+	for _, chunk := range chunks {
+		_, err := dao.Ctx(ctx).Data(chunk).Insert()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (dao *dbKnowledgeChunksDao) GetChunksByUrlID(ctx context.Context, urlId string) ([]*entity.DbKnowledgeChunks, error) {
+	var results []*entity.DbKnowledgeChunks
+	err := dao.Ctx(ctx).Where("url_id = ? AND is_deleted = false", urlId).
+		OrderAsc("chunk_index").Scan(&results)
+	return results, err
+}
+
+func (dao *dbKnowledgeChunksDao) GetChunksByUserID(ctx context.Context, userId string, offset, limit int) ([]*entity.DbKnowledgeChunks, error) {
+	var results []*entity.DbKnowledgeChunks
+	err := dao.Ctx(ctx).Where("user_id = ? AND is_deleted = false", userId).
+		OrderDesc("created_at").Offset(offset).Limit(limit).Scan(&results)
+	return results, err
+}

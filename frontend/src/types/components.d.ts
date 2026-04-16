@@ -37,6 +37,7 @@ declare module 'vue' {
     ListPanel: typeof import('./../components/ListPanel/index.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    SearchArea: typeof import('./../components/KnowledgePanel/components/SearchArea/index.vue')['default']
     TaskCard: typeof import('./../components/TaskCard/index.vue')['default']
     TaskItem: typeof import('./../components/TaskItem/index.vue')['default']
     TaskPanel: typeof import('./../components/TaskPanel/index.vue')['default']

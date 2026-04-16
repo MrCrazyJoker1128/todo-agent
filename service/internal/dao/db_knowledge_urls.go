@@ -5,18 +5,45 @@
 package dao
 
 import (
+	"context"
 	"service/internal/dao/internal"
+	"service/internal/model/entity"
 )
 
 // dbKnowledgeUrlsDao is the data access object for the table db_knowledge_urls.
-// You can define custom methods on it to extend its functionality as needed.
 type dbKnowledgeUrlsDao struct {
 	*internal.DbKnowledgeUrlsDao
 }
 
 var (
-	// DbKnowledgeUrls is a globally accessible object for table db_knowledge_urls operations.
 	DbKnowledgeUrls = dbKnowledgeUrlsDao{internal.NewDbKnowledgeUrlsDao()}
 )
 
-// Add your custom methods and functionality below.
+func (dao *dbKnowledgeUrlsDao) InsertUrl(ctx context.Context, url *entity.DbKnowledgeUrls) error {
+	_, err := dao.Ctx(ctx).Data(url).Insert()
+	return err
+}
+
+func (dao *dbKnowledgeUrlsDao) UpdateStatus(ctx context.Context, id string, status, errMsg string) error {
+	_, err := dao.Ctx(ctx).Where("id = ?", id).Data(map[string]any{
+		"status":        status,
+		"error_message": errMsg,
+	}).Update()
+	return err
+}
+
+func (dao *dbKnowledgeUrlsDao) GetUrlByID(ctx context.Context, id string) (*entity.DbKnowledgeUrls, error) {
+	var result entity.DbKnowledgeUrls
+	err := dao.Ctx(ctx).Where("id = ?", id).Scan(&result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+func (dao *dbKnowledgeUrlsDao) GetUrlsByUserID(ctx context.Context, userId string, offset, limit int) ([]*entity.DbKnowledgeUrls, error) {
+	var results []*entity.DbKnowledgeUrls
+	err := dao.Ctx(ctx).Where("user_id = ? AND is_deleted = false", userId).
+		OrderDesc("created_at").Offset(offset).Limit(limit).Scan(&results)
+	return results, err
+}
