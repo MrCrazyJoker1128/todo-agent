@@ -54,6 +54,14 @@ func (k *KnowledgeController) AddKnowledge(ctx context.Context, req *api.AddKnow
 
 	domain := extractDomain(req.Url)
 
+	existingUrl, err := dao.DbKnowledgeUrls.GetUrlByUserAndUrl(ctx, userId.String(), req.Url)
+	if err != nil {
+		g.Log().Debug(ctx, "check existing url: %v", err)
+	}
+	if existingUrl != nil {
+		return nil, fmt.Errorf("该知识库已存在，请勿重复添加")
+	}
+
 	urlId := uuid.New()
 	now := gtime.Now()
 
@@ -73,7 +81,7 @@ func (k *KnowledgeController) AddKnowledge(ctx context.Context, req *api.AddKnow
 		WordCount:    len(contentData.Content),
 		ChunkCount:   0,
 		ContentHash:  hashStr,
-		Status:       "processing",
+		Status:       "pending",
 		ErrorMessage: "",
 		IsDeleted:    false,
 		DeletedAt:    nil,
@@ -88,6 +96,21 @@ func (k *KnowledgeController) AddKnowledge(ctx context.Context, req *api.AddKnow
 		return nil, fmt.Errorf("insert url record failed: %w", err)
 	}
 
+	res = &api.AddKnowledgeRes{
+		Id: urlId,
+	}
+
+	go k.processChunksAsync(urlId, userId, contentData, req.Url, hashStr, now)
+
+	return res, nil
+}
+
+func (k *KnowledgeController) processChunksAsync(urlId uuid.UUID, userId uuid.UUID, contentData tools.ExtractContentResult, pageUrl, hashStr string, now *gtime.Time) {
+	ctx := context.Background()
+
+	updateUrlStatus(ctx, urlId, "processing", "")
+	g.Log().Info(ctx, "processChunksAsync: started processing urlId=%s", urlId.String())
+
 	splitter, err := recursive.NewSplitter(ctx, &recursive.Config{
 		ChunkSize:   1500,
 		OverlapSize: 300,
@@ -95,7 +118,8 @@ func (k *KnowledgeController) AddKnowledge(ctx context.Context, req *api.AddKnow
 	if err != nil {
 		g.Log().Error(ctx, "create splitter failed: %v", err)
 		updateUrlStatus(ctx, urlId, "failed", err.Error())
-		return nil, fmt.Errorf("create splitter failed: %w", err)
+		g.Log().Info(ctx, "processChunksAsync: failed at splitter urlId=%s, error=%v", urlId.String(), err)
+		return
 	}
 
 	docs := []*schema.Document{
@@ -105,7 +129,7 @@ func (k *KnowledgeController) AddKnowledge(ctx context.Context, req *api.AddKnow
 			MetaData: map[string]any{
 				"title":  contentData.Title,
 				"author": contentData.Author,
-				"url":    req.Url,
+				"url":    pageUrl,
 			},
 		},
 	}
@@ -114,25 +138,28 @@ func (k *KnowledgeController) AddKnowledge(ctx context.Context, req *api.AddKnow
 	if err != nil {
 		g.Log().Error(ctx, "split document failed: %v", err)
 		updateUrlStatus(ctx, urlId, "failed", err.Error())
-		return nil, fmt.Errorf("split document failed: %w", err)
+		g.Log().Info(ctx, "processChunksAsync: failed at split urlId=%s, error=%v", urlId.String(), err)
+		return
 	}
 
 	embedder, err := ollama.NewEmbedder(ctx, &ollama.EmbeddingConfig{
 		BaseURL: "http://localhost:11434",
 		Model:   "qwen3-embedding:8b",
-		Timeout: 120 * time.Second,
+		Timeout: 10 * time.Minute,
 	})
 	if err != nil {
 		g.Log().Error(ctx, "create embedder failed: %v", err)
 		updateUrlStatus(ctx, urlId, "failed", err.Error())
-		return nil, fmt.Errorf("create embedder failed: %w", err)
+		g.Log().Info(ctx, "processChunksAsync: failed at embedder urlId=%s, error=%v", urlId.String(), err)
+		return
 	}
 
 	esClient, err := utility.ES()
 	if err != nil {
 		g.Log().Error(ctx, "get es client failed: %v", err)
 		updateUrlStatus(ctx, urlId, "failed", err.Error())
-		return nil, fmt.Errorf("get es client failed: %w", err)
+		g.Log().Info(ctx, "processChunksAsync: failed at ES client urlId=%s, error=%v", urlId.String(), err)
+		return
 	}
 
 	esIndexer, err := es8.NewIndexer(ctx, &es8.IndexerConfig{
@@ -156,7 +183,8 @@ func (k *KnowledgeController) AddKnowledge(ctx context.Context, req *api.AddKnow
 	if err != nil {
 		g.Log().Error(ctx, "create es indexer failed: %v", err)
 		updateUrlStatus(ctx, urlId, "failed", err.Error())
-		return nil, fmt.Errorf("create es indexer failed: %w", err)
+		g.Log().Info(ctx, "processChunksAsync: failed at ES indexer urlId=%s, error=%v", urlId.String(), err)
+		return
 	}
 
 	chunkDocs := make([]*schema.Document, 0, len(chunks))
@@ -203,20 +231,47 @@ func (k *KnowledgeController) AddKnowledge(ctx context.Context, req *api.AddKnow
 		_, err = esIndexer.Store(ctx, chunkDocs)
 		if err != nil {
 			g.Log().Error(ctx, "index chunks to es failed: %v", err)
+			updateUrlStatus(ctx, urlId, "failed", err.Error())
+			g.Log().Info(ctx, "processChunksAsync: failed urlId=%s, error=%v", urlId.String(), err)
+			return
 		}
 	}
 
 	updateUrlStatus(ctx, urlId, "completed", "")
-
-	res = &api.AddKnowledgeRes{
-		Id: urlId,
-	}
-	return res, nil
+	g.Log().Info(ctx, "processChunksAsync: completed urlId=%s", urlId.String())
 }
 
 func (k *KnowledgeController) GetKnowledgeList(ctx context.Context, req *api.GetKnowledgeListReq) (res *api.GetKnowledgeListRes, err error) {
+	r := g.RequestFromCtx(ctx)
+	userIdStr := r.GetParam("userId").String()
+	if userIdStr == "" {
+		return nil, fmt.Errorf("user_id not found")
+	}
+	userId, err := uuid.Parse(userIdStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid user_id: %w", err)
+	}
 
-	return nil, nil
+	res, err = dao.DbKnowledgeUrls.GetKnowledgeList(ctx, req, userId.String())
+	if err != nil {
+		return nil, fmt.Errorf("get knowledge list failed: %w", err)
+	}
+	return res, nil
+}
+func (k *KnowledgeController) DeleteKnowledgeUrl(ctx context.Context, req *api.DeleteKnowledgeUrlReq) (res *api.DeleteKnowledgeUrlRes, err error) {
+	urlId, err := uuid.Parse(req.Id)
+	if err != nil {
+		g.Log().Error(ctx, "parse url_id failed: %v", err)
+		return nil, fmt.Errorf("invalid url_id: %w", err)
+	}
+	err = dao.DbKnowledgeUrls.DeleteKnowledgeUrl(ctx, urlId)
+	if err != nil {
+		g.Log().Error(ctx, "delete knowledge url failed: %v", err)
+		return nil, fmt.Errorf("delete knowledge url failed: %w", err)
+	}
+	return &api.DeleteKnowledgeUrlRes{
+		Message: "删除知识库成功",
+	}, nil
 }
 
 func updateUrlStatus(ctx context.Context, urlId uuid.UUID, status, errMsg string) {

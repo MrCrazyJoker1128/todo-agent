@@ -65,11 +65,23 @@ export interface PageReq {
   per_page?: number;
 }
 export interface PageResp {
-  current_page?: number; // 当前页码
-  per_page?: number; // 每页数据量
-  total_count?: number; // 总数据量
-  total_pages?: number; // 总页码量
+  total?: number; // 总数据量
 }
 export interface ListBaseResp {
   page: PageResp;
+}
+/**
+ * TableColumn接口定义了表格表头的基本属性。
+ */
+export interface TableColumn {
+  minWidth?: string | number;
+  width?: string | number;
+  label: string;
+  prop: string;
+  className?: string;
+  type?: string;
+  isSorted?: boolean;
+  align?: string;
+  fixed?: TableFixed | boolean;
+  slot?: string;
 }

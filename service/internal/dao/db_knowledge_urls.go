@@ -6,9 +6,16 @@ package dao
 
 import (
 	"context"
+	"fmt"
 	"service/api"
 	"service/internal/dao/internal"
 	"service/internal/model/entity"
+	"strings"
+
+	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/os/gtime"
+	"github.com/gogf/gf/v2/util/gconv"
+	"github.com/google/uuid"
 )
 
 // dbKnowledgeUrlsDao is the data access object for the table db_knowledge_urls.
@@ -42,6 +49,57 @@ func (dao *dbKnowledgeUrlsDao) GetUrlByID(ctx context.Context, id string) (*enti
 	return &result, nil
 }
 
+func (dao *dbKnowledgeUrlsDao) GetUrlByUserAndUrl(ctx context.Context, userId, url string) (*entity.DbKnowledgeUrls, error) {
+	var result entity.DbKnowledgeUrls
+	err := dao.Ctx(ctx).Where("user_id = ? AND url = ? AND is_deleted = false", userId, url).Scan(&result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+func buildZhparserQuery(keyword string) string {
+	runes := []rune(keyword)
+	if len(runes) == 0 {
+		return keyword
+	}
+	var parts []string
+	for _, r := range runes {
+		if r > 0x4e00 && r < 0x9fa5 {
+			parts = append(parts, string(r))
+		}
+	}
+	if len(parts) == 0 {
+		return keyword
+	}
+	return strings.Join(parts, " | ")
+}
+
+func buildILikeClause(keyword string, fieldName string) string {
+	runes := []rune(keyword)
+	var clauses []string
+	for _, r := range runes {
+		if r > 0x4e00 && r < 0x9fa5 {
+			clauses = append(clauses, fmt.Sprintf("%s ILIKE '%%%s%%'", fieldName, string(r)))
+		}
+	}
+	if len(clauses) == 0 {
+		clauses = append(clauses, fmt.Sprintf("%s ILIKE '%%%s%%'", fieldName, keyword))
+	}
+	return "(" + strings.Join(clauses, " OR ") + ")"
+}
+
+func buildSelectSqlWithHighlight(whereClause, titleQuery, authorQuery string, limit, offset int) string {
+	var fields []string
+	fields = append(fields, "id")
+	fields = append(fields, "title")
+	fields = append(fields, "author")
+	fields = append(fields, "domain", "url", "created_at", "updated_at", "status")
+
+	return fmt.Sprintf("SELECT %s FROM db_knowledge_urls WHERE %s ORDER BY created_at DESC LIMIT %d OFFSET %d",
+		strings.Join(fields, ", "), whereClause, limit, offset)
+}
+
 func (dao *dbKnowledgeUrlsDao) GetUrlsByUserID(ctx context.Context, userId string, offset, limit int) ([]*entity.DbKnowledgeUrls, error) {
 	var results []*entity.DbKnowledgeUrls
 	err := dao.Ctx(ctx).Where("user_id = ? AND is_deleted = false", userId).
@@ -49,7 +107,119 @@ func (dao *dbKnowledgeUrlsDao) GetUrlsByUserID(ctx context.Context, userId strin
 	return results, err
 }
 
-func (dao *dbKnowledgeUrlsDao) GetKnowledgeList(ctx context.Context, req *api.GetKnowledgeListReq) (*api.GetKnowledgeListRes, error) {
+func (dao *dbKnowledgeUrlsDao) GetKnowledgeList(ctx context.Context, req *api.GetKnowledgeListReq, userId string) (*api.GetKnowledgeListRes, error) {
+	if req.CurrentPage <= 0 {
+		req.CurrentPage = 1
+	}
+	if req.PerPage <= 0 {
+		req.PerPage = 20
+	}
+	offset := (req.CurrentPage - 1) * req.PerPage
 
-	return nil, err
+	var err error
+
+	model := dao.Ctx(ctx).Where("user_id = ? AND is_deleted = false", userId)
+
+	whereClause := fmt.Sprintf("user_id = '%s' AND is_deleted = false", userId)
+	if req.Title != "" {
+		titleQuery := buildZhparserQuery(req.Title)
+		titleLikeClause := buildILikeClause(req.Title, "title")
+		model = model.Where("to_tsvector('zhparser', title) @@ to_tsquery('zhparser', ?) OR "+titleLikeClause, titleQuery)
+		whereClause += fmt.Sprintf(" AND (to_tsvector('zhparser', title) @@ to_tsquery('zhparser', '%s') OR %s)", titleQuery, titleLikeClause)
+	}
+	if req.Author != "" {
+		authorQuery := buildZhparserQuery(req.Author)
+		authorLikeClause := buildILikeClause(req.Author, "author")
+		model = model.Where("to_tsvector('zhparser', author) @@ to_tsquery('zhparser', ?) OR "+authorLikeClause, authorQuery)
+		whereClause += fmt.Sprintf(" AND (to_tsvector('zhparser', author) @@ to_tsquery('zhparser', '%s') OR %s)", authorQuery, authorLikeClause)
+	}
+	if req.Domain != "" {
+		model = model.Where("domain LIKE ?", "%"+req.Domain+"%")
+		whereClause += fmt.Sprintf(" AND domain LIKE '%%%s%%'", req.Domain)
+	}
+	if req.Status != "" {
+		model = model.Where("status = ?", req.Status)
+		whereClause += fmt.Sprintf(" AND status = '%s'", req.Status)
+	}
+	countSql := fmt.Sprintf("SELECT COUNT(*) FROM db_knowledge_urls WHERE %s", whereClause)
+	g.Log().Debugf(ctx, "COUNT SQL: %s", countSql)
+
+	var total int
+	total, err = model.Count(ctx)
+	if err != nil {
+		g.Log().Errorf(ctx, "COUNT error: %v", err)
+		return nil, err
+	}
+	g.Log().Debugf(ctx, "COUNT result: total=%d", total)
+
+	var titleQueryStr, authorQueryStr string
+	if req.Title != "" {
+		titleQueryStr = buildZhparserQuery(req.Title)
+	}
+	if req.Author != "" {
+		authorQueryStr = buildZhparserQuery(req.Author)
+	}
+
+	listSql := buildSelectSqlWithHighlight(whereClause, titleQueryStr, authorQueryStr, req.PerPage, offset)
+	g.Log().Debugf(ctx, "LIST SQL: %s", listSql)
+
+	r, err := dao.DB().Query(ctx, listSql)
+	if err != nil {
+		g.Log().Errorf(ctx, "LIST error: %v", err)
+		return nil, err
+	}
+	g.Log().Debugf(ctx, "LIST result: len(results)=%d", len(r))
+
+	type knowledgeResult struct {
+		Id        string `json:"id"`
+		Title     string `json:"title"`
+		Author    string `json:"author"`
+		Domain    string `json:"domain"`
+		Url       string `json:"url"`
+		CreatedAt string `json:"created_at"`
+		UpdatedAt string `json:"updated_at"`
+		Status    string `json:"status"`
+	}
+
+	items := make([]*api.GetKnowledgeListItem, 0)
+	for _, record := range r {
+		var result knowledgeResult
+		if err := gconv.Struct(record, &result); err != nil {
+			g.Log().Errorf(ctx, "gconv.Struct error: %v", err)
+			continue
+		}
+		item := &api.GetKnowledgeListItem{
+			Domain: result.Domain,
+			Url:    result.Url,
+			Status: result.Status,
+		}
+		if id, err := uuid.Parse(result.Id); err == nil {
+			item.Id = id
+		}
+		if result.Title != "" {
+			item.Title = result.Title
+		}
+		if result.Author != "" {
+			item.Author = result.Author
+		}
+		if result.CreatedAt != "" {
+			if t, err := gtime.StrToTime(result.CreatedAt); err == nil {
+				item.CreatedAt = t.Time
+				item.UploadAt = t.Time
+			}
+		}
+		items = append(items, item)
+	}
+
+	return &api.GetKnowledgeListRes{
+		Items: items,
+		Total: int64(total),
+	}, nil
+}
+
+func (dao *dbKnowledgeUrlsDao) DeleteKnowledgeUrl(ctx context.Context, urlId uuid.UUID) error {
+	_, err := g.Model("db_knowledge_urls").
+		Where("id = ?", urlId).
+		Update("is_deleted", true)
+	return err
 }

@@ -4,6 +4,7 @@ type Events = {
   sseMessage: any;
   sseComplete: void;
   sseError: Error;
+  addComplete: void;
 };
 
 const emitter: Emitter<Events> = mitt<Events>();

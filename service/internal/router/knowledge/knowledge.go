@@ -10,5 +10,6 @@ func RegisterRoutes(group *ghttp.RouterGroup) {
 	_ = knowledge.NewKnowledgeController()
 	group.Group("/knowledge", func(group *ghttp.RouterGroup) {
 		group.POST("/add", knowledge.NewKnowledgeController().AddKnowledge)
+		group.GET("/list", knowledge.NewKnowledgeController().GetKnowledgeList)
 	})
 }

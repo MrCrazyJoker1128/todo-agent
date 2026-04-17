@@ -9,18 +9,13 @@
         </el-tabs>
       </div>
       <div class="flex-1 w-full flex-col">
-        <component
-          ref="listPanelRef"
-          :is="tabComponent"
-          @task-click="handleTaskClick"
-        />
+        <component :is="tabComponent" @task-click="handleTaskClick" />
       </div>
     </div>
   </main>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import CalendarPanel from "../CalendarPanel/index.vue";
 import ListPanel from "../ListPanel/index.vue";
@@ -36,7 +31,6 @@ defineOptions({
 });
 const taskPanelStore = useTaskPanelStore();
 const { activeTab } = storeToRefs(taskPanelStore);
-const listPanelRef = ref<InstanceType<typeof ListPanel> | null>(null);
 
 interface Task {
   id: string;
@@ -57,8 +51,10 @@ const tabs: TabItem[] = [
   { label: "知识库", name: "knowledge", component: "KnowledgePanel" },
 ];
 const tabComponent = computed(() => {
-  const tab = tabs.find((item) => item.name === activeTab.value);
-  return tab.component;
+  const tab: TabItem | undefined = tabs.find(
+    (item) => item.name === activeTab.value,
+  );
+  return tab?.component;
 });
 const handleTaskClick = (task: Task) => {
   console.log("Task clicked:", task);

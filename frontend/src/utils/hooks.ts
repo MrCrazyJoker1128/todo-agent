@@ -1,9 +1,4 @@
-import type {
-  IResult,
-  ListBaseResp,
-  LoadingOption,
-  PageReq,
-} from "@/types/type";
+import type { IResult, LoadingOption, PageReq, PageResp } from "@/types/type";
 import { useThrottleFn } from "@vueuse/core";
 import type { AxiosResponse } from "axios";
 import type { Ref } from "vue";
@@ -92,7 +87,7 @@ export function useRequestHook<U>(options: RequestOption<U>): RequestHook {
  * 定义分页配置接口，继承自PageBase
  * @extends PageBase
  */
-interface pageOptionType extends PageReq {
+export interface pageOptionType extends PageReq {
   total: number; // 总数据数
   loading: boolean; // 加载状态
 }
@@ -143,13 +138,11 @@ export function usePageHook<U>(options: PageOptions<U>): PageHookOption {
     options
       .requestFunc({
         ...data,
-        page: {
-          current_page: pageOption.current_page,
-          per_page: pageOption.per_page,
-        },
+        current_page: pageOption.current_page,
+        per_page: pageOption.per_page,
       })
-      .then((res: AxiosResponse<IResult<U & ListBaseResp>>) => {
-        pageOption.total = res.data.data.page.total_count ?? 0; // 更新总数据数
+      .then((res: AxiosResponse<IResult<U & PageResp>>) => {
+        pageOption.total = res.data.data.total ?? 0; // 更新总数据数
         options.success(res.data); // 调用成功时的回调函数，传入响应数据
       })
       .catch((err: any) => {

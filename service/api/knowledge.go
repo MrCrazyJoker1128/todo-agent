@@ -17,10 +17,13 @@ type AddKnowledgeRes struct {
 }
 
 type GetKnowledgeListReq struct {
-	g.Meta `method:"GET" path:"/list" summary:"获取知识库列表" tags:"知识库"`
-	Title  string `json:"title" description:"知识库标题"`
-	Author string `json:"author" description:"知识库作者"`
-	Domain string `json:"domain" description:"知识库域名"`
+	g.Meta      `method:"GET" path:"list" summary:"获取知识库列表" tags:"知识库"`
+	Title       string `json:"title" description:"知识库标题（中文分词搜索）"`
+	Author      string `json:"author" description:"知识库作者（中文分词搜索）"`
+	Domain      string `json:"domain" description:"知识库域名（模糊搜索）"`
+	Status      string `json:"status" description:"知识库状态"`
+	CurrentPage int    `json:"current_page" description:"当前页码"`
+	PerPage     int    `json:"per_page" description:"每页数量"`
 }
 type GetKnowledgeListItem struct {
 	Id        uuid.UUID `json:"id"`
@@ -33,6 +36,14 @@ type GetKnowledgeListItem struct {
 	Status    string    `json:"status"`
 }
 type GetKnowledgeListRes struct {
-	Items []GetKnowledgeListItem `json:"items"`
-	Total int64                  `json:"total"`
+	Items []*GetKnowledgeListItem `json:"items"`
+	Total int64                   `json:"total"`
+}
+
+type DeleteKnowledgeUrlReq struct {
+	g.Meta `method:"DELETE" path:"/delete" summary:"删除知识库" tags:"知识库"`
+	Id     string `json:"id" validate:"required" description:"知识库ID"`
+}
+type DeleteKnowledgeUrlRes struct {
+	Message string `json:"message"`
 }

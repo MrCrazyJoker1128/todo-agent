@@ -1,0 +1,38 @@
+FROM postgres:17
+
+# 安装编译工具和依赖
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    git \
+    wget \
+    postgresql-server-dev-17 \
+    bzip2 \
+    && rm -rf /var/lib/apt/lists/*
+
+# 安装 pgvector（向量数据库扩展）
+RUN cd /tmp && \
+    git clone --depth 1 https://github.com/pgvector/pgvector.git && \
+    cd pgvector && \
+    make && make install && \
+    cd / && rm -rf /tmp/pgvector
+
+# 安装 scws（zhparser 依赖）
+RUN cd /tmp && \
+    wget -q -O scws-1.2.3.tar.bz2 http://www.xunsearch.com/scws/down/scws-1.2.3.tar.bz2 && \
+    tar -jxvf scws-1.2.3.tar.bz2 && \
+    cd scws-1.2.3 && \
+    ./configure && make && make install && \
+    cd / && rm -rf /tmp/scws*
+
+# 安装 zhparser
+RUN cd /tmp && \
+    git clone https://github.com/amutu/zhparser.git && \
+    cd zhparser && \
+    make && make install && \
+    cd / && rm -rf /tmp/zhparser
+
+# 初始化扩展
+RUN mkdir -p /docker-entrypoint-initdb.d && \
+    echo "CREATE EXTENSION IF NOT EXISTS zhparser;" > /docker-entrypoint-initdb.d/init.sql && \
+    echo "CREATE EXTENSION IF NOT EXISTS pg_trgm;" >> /docker-entrypoint-initdb.d/init.sql && \
+    echo "CREATE EXTENSION IF NOT EXISTS vector;" >> /docker-entrypoint-initdb.d/init.sql
