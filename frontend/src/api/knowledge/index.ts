@@ -21,3 +21,8 @@ export function fetchCreateKnowledgeUrl(req: CreateKnowledgeUrlRequest) {
     req,
   ) as unknown as Promise<AxiosResponse<IResult<CreateKnowledgeUrlResponse>>>;
 }
+export function fetchDeleteKnowledgeUrl(req: { id: string }) {
+  return service.delete<{ message: string }>("/knowledge/delete", {
+    params: req,
+  }) as unknown as Promise<AxiosResponse<IResult<{ message: string }>>>;
+}

@@ -73,6 +73,8 @@ github.com/cloudwego/eino-ext/components/indexer/milvus2 v0.0.0-20260323112355-f
 github.com/cloudwego/eino-ext/components/indexer/milvus2 v0.0.0-20260323112355-f061db7e8419/go.mod h1:6+N5OCZrRkr8cUvTtbsEAhVAQvcVebzkh1LYRR76Lgo=
 github.com/cloudwego/eino-ext/components/model/ark v0.1.65 h1:52ukXVU9ntToTa36SwI8be81qskGkpUEZraIFOf0wqk=
 github.com/cloudwego/eino-ext/components/model/ark v0.1.65/go.mod h1:aabMR15RTXBSi9Eu13CWavzE+no5BQO4FJUEEdqImbg=
+github.com/cloudwego/eino-ext/components/retriever/es8 v0.0.0-20260416081055-0ebab92e14f2 h1:UKO9oriIlAU71ed+UhkeltRoBp+ut49mQkB6ViqKmVg=
+github.com/cloudwego/eino-ext/components/retriever/es8 v0.0.0-20260416081055-0ebab92e14f2/go.mod h1:H4kNmiTe2irnvipVNIP4q8yqXf2fZ6v24krvQYBtYb8=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
 github.com/cncf/udpa/go v0.0.0-20201120205902-5459f2c99403/go.mod h1:WmhPx2Nbnhtbo57+VJT5O0JRkEi1Wbu0z5j0R8u5Hbk=
 github.com/cockroachdb/datadriven v1.0.2 h1:H9MtNqVoVhvd9nCBwOyDjUEdZCREqbIdCJD93PBm/jA=

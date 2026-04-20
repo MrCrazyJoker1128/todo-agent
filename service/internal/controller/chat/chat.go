@@ -75,10 +75,15 @@ func getSystemPrompt() string {
    - chatId：通过会话ID查找该会话关联的任务并取消
    - 不带参数：自动取消用户最近创建的任务
 
+3. add_knowledge - 添加知识库
+   - 当用户说"添加知识库"、"保存到知识库"、"记一个知识"、"把这个网页添加到知识库"时调用
+   - 参数：url(必填，要添加的网页URL)
+   -会自动提取标题、作者、内容，并保存到知识库
+
 **判断规则（关键）：**
-- 当用户明确表达任务相关意图时，调用相应工具
+- 当用户明确表达任务或知识库相关意图时，调用相应工具
 - 当用户询问技术问题、讨论概念、聊天交流时，**直接回答问题，不要调用任何工具**
-- 例如："今天天气怎么样" → 直接回答；"添加任务明天开会" → 调用 create_task；"删除刚才创建的任务" → 调用 cancel_task
+- 例如："今天天气怎么样" → 直接回答；"添加任务明天开会" → 调用 create_task；"删除刚才创建的任务" → 调用 cancel_task；"把这个网址加入知识库" → 调用 add_knowledge
 
 **时间转换（北京时间 UTC+8）：**
 - 今天下午3点 = 2026-04-02T15:00:00+08:00
@@ -89,12 +94,13 @@ func getSystemPrompt() string {
 func createAgent(ctx context.Context, chatModel model.ToolCallingChatModel, systemPrompt string) (*react.Agent, *toolResultHandler, error) {
 	createTaskTool := tools.CreateTask()
 	cancelTaskTool := tools.CancelTask()
+	addKnowledgeTool := tools.AddKnowledgeTool()
 	toolHandler := &toolResultHandler{}
 
 	agent, err := react.NewAgent(ctx, &react.AgentConfig{
 		ToolCallingModel: chatModel,
 		ToolsConfig: compose.ToolsNodeConfig{
-			Tools:               []tool.BaseTool{createTaskTool, cancelTaskTool},
+			Tools:               []tool.BaseTool{createTaskTool, cancelTaskTool, addKnowledgeTool},
 			ExecuteSequentially: false,
 		},
 		MessageModifier: func(ctx context.Context, input []*schema.Message) []*schema.Message {
@@ -158,6 +164,19 @@ func executeToolCall(ctx context.Context, tc *schema.ToolCall, userId string, to
 		if toolErr != nil {
 			g.Log().Error(ctx, "cancel_task failed: %v", toolErr)
 		}
+	} else if tc.Function.Name == "add_knowledge" {
+		addKnowledgeTool := tools.AddKnowledgeTool()
+		result, toolErr := addKnowledgeTool.InvokableRun(ctxWithUserId, argsJSON)
+		if toolErr != nil {
+			g.Log().Error(ctx, "add_knowledge failed: %v", toolErr)
+			toolHandler.mu.Lock()
+			toolHandler.knowledgeError = toolErr.Error()
+			toolHandler.mu.Unlock()
+		} else {
+			toolHandler.mu.Lock()
+			toolHandler.knowledgeResult = result
+			toolHandler.mu.Unlock()
+		}
 	}
 }
 
@@ -194,7 +213,9 @@ func saveChatMessage(ctx context.Context, id, userId uuid.UUID, content, role st
 
 type toolResultHandler struct {
 	callbacks.HandlerBuilder
-	createdTaskID uuid.UUID
+	createdTaskID      uuid.UUID
+	knowledgeResult  string
+	knowledgeError  string
 	mu            sync.RWMutex
 }
 
@@ -243,6 +264,18 @@ func (h *toolResultHandler) IsTaskCreated() bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return h.createdTaskID != uuid.Nil
+}
+
+func (h *toolResultHandler) GetKnowledgeResult() string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return h.knowledgeResult
+}
+
+func (h *toolResultHandler) GetKnowledgeError() string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return h.knowledgeError
 }
 func (c *ChatController) GetChatList(ctx context.Context, req *api.GetChatListReq) (res *api.GetChatListRes, err error) {
 	r := g.RequestFromCtx(ctx)
@@ -366,6 +399,15 @@ func (c *ChatController) SendChatMessage(ctx context.Context, req *api.SendChatM
 		g.Log().Error(ctx, "insert chat message failed: %v", err)
 		sendErrorResponse(r, "insert chat message failed")
 		return nil, err
+	}
+
+	knowledgeResult := toolHandler.GetKnowledgeResult()
+	knowledgeError := toolHandler.GetKnowledgeError()
+
+	if knowledgeError != "" {
+		sendSSEEvent(r, "knowledge_error", systemChatId, knowledgeError, uuid.Nil)
+	} else if knowledgeResult != "" {
+		sendSSEEvent(r, "knowledge_added", systemChatId, knowledgeResult, uuid.Nil)
 	}
 
 	sendSSEEvent(r, "complete", systemChatId, "", toolHandler.GetTaskID())

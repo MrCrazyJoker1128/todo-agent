@@ -75,7 +75,9 @@ function handleSearch() {
 }
 
 eventBus.on("addComplete", () => {
-  console.log("addComplete");
+  handleSearch();
+});
+eventBus.on("sseComplete", () => {
   handleSearch();
 });
 defineExpose({

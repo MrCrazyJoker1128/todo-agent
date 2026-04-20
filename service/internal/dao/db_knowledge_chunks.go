@@ -8,6 +8,10 @@ import (
 	"context"
 	"service/internal/dao/internal"
 	"service/internal/model/entity"
+
+	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/os/gtime"
+	"github.com/google/uuid"
 )
 
 type dbKnowledgeChunksDao struct {
@@ -45,4 +49,13 @@ func (dao *dbKnowledgeChunksDao) GetChunksByUserID(ctx context.Context, userId s
 	err := dao.Ctx(ctx).Where("user_id = ? AND is_deleted = false", userId).
 		OrderDesc("created_at").Offset(offset).Limit(limit).Scan(&results)
 	return results, err
+}
+func (dao *dbKnowledgeChunksDao) DeleteChunksByUrlID(ctx context.Context, urlId uuid.UUID) error {
+	_, err := g.Model("db_knowledge_chunks").
+		Where("url_id = ? AND is_deleted = false", urlId).
+		Update(g.Map{
+			"is_deleted": true,
+			"deleted_at": gtime.Now(),
+		})
+	return err
 }

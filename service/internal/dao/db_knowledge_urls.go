@@ -220,6 +220,17 @@ func (dao *dbKnowledgeUrlsDao) GetKnowledgeList(ctx context.Context, req *api.Ge
 func (dao *dbKnowledgeUrlsDao) DeleteKnowledgeUrl(ctx context.Context, urlId uuid.UUID) error {
 	_, err := g.Model("db_knowledge_urls").
 		Where("id = ?", urlId).
-		Update("is_deleted", true)
+		Update(g.Map{
+			"is_deleted": true,
+			"deleted_at": gtime.Now(),
+		})
+	if err != nil {
+		return err
+	}
+	// 删除关联的 chunks
+	err = DbKnowledgeChunks.DeleteChunksByUrlID(ctx, urlId)
+	if err != nil {
+		return err
+	}
 	return err
 }
