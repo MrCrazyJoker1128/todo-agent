@@ -404,13 +404,22 @@ func (c *ChatController) SendChatMessage(ctx context.Context, req *api.SendChatM
 	knowledgeResult := toolHandler.GetKnowledgeResult()
 	knowledgeError := toolHandler.GetKnowledgeError()
 
-	if knowledgeError != "" {
-		sendSSEEvent(r, "knowledge_error", systemChatId, knowledgeError, uuid.Nil)
-	} else if knowledgeResult != "" {
-		sendSSEEvent(r, "knowledge_added", systemChatId, knowledgeResult, uuid.Nil)
+	if knowledgeResult != "" {
+		var kr map[string]interface{}
+		json.Unmarshal([]byte(knowledgeResult), &kr)
+		if title, ok := kr["title"].(string); ok {
+			finalContent += "\n\n✅ 知识库添加成功：\n- 标题：" + title
+			if author, ok := kr["author"].(string); ok && author != "" {
+				finalContent += "\n- 作者：" + author
+			}
+		}
 	}
 
-	sendSSEEvent(r, "complete", systemChatId, "", toolHandler.GetTaskID())
+	if knowledgeError != "" {
+		finalContent += "\n\n❌ 添加知识库失败：" + knowledgeError
+	}
+
+	sendSSEEvent(r, "complete", systemChatId, finalContent, toolHandler.GetTaskID())
 	return nil, nil
 }
 

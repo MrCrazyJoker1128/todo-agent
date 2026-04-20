@@ -80,6 +80,10 @@ eventBus.on("addComplete", () => {
 eventBus.on("sseComplete", () => {
   handleSearch();
 });
+onUnmounted(() => {
+  eventBus.off("addComplete");
+  eventBus.off("sseComplete");
+});
 defineExpose({
   searchReq,
 });
