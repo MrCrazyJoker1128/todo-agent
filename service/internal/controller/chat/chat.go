@@ -80,6 +80,11 @@ func getSystemPrompt() string {
    - 参数：url(必填，要添加的网页URL)
    -会自动提取标题、作者、内容，并保存到知识库
 
+4. search_knowledge - 搜索知识库
+   - 当用户询问问题，需要从已添加的知识库中查找相关信息时调用
+   - 参数：query(必填，用户的问题)
+   - 返回与问题相关的知识库片段（最多5条）
+
 **判断规则（关键）：**
 - 当用户明确表达任务或知识库相关意图时，调用相应工具
 - 当用户询问技术问题、讨论概念、聊天交流时，**直接回答问题，不要调用任何工具**
@@ -95,12 +100,13 @@ func createAgent(ctx context.Context, chatModel model.ToolCallingChatModel, syst
 	createTaskTool := tools.CreateTask()
 	cancelTaskTool := tools.CancelTask()
 	addKnowledgeTool := tools.AddKnowledgeTool()
+	searchKnowledgeTool := tools.SearchKnowledgeTool()
 	toolHandler := &toolResultHandler{}
 
 	agent, err := react.NewAgent(ctx, &react.AgentConfig{
 		ToolCallingModel: chatModel,
 		ToolsConfig: compose.ToolsNodeConfig{
-			Tools:               []tool.BaseTool{createTaskTool, cancelTaskTool, addKnowledgeTool},
+			Tools:               []tool.BaseTool{createTaskTool, cancelTaskTool, addKnowledgeTool, searchKnowledgeTool},
 			ExecuteSequentially: false,
 		},
 		MessageModifier: func(ctx context.Context, input []*schema.Message) []*schema.Message {
@@ -119,6 +125,7 @@ func createAgent(ctx context.Context, chatModel model.ToolCallingChatModel, syst
 
 // handleToolCalls 处理流式 tool_calls
 func handleToolCalls(ctx context.Context, msg *schema.Message, toolCallBuffer map[int]*schema.ToolCall, userId string, toolHandler *toolResultHandler) {
+	g.Log().Info(ctx, "[handleToolCalls] 收到 tool_calls, 数量: %d, userId: %s", len(msg.ToolCalls), userId)
 	for _, tc := range msg.ToolCalls {
 		if tc.Index != nil {
 			idx := int(*tc.Index)
@@ -173,6 +180,18 @@ func executeToolCall(ctx context.Context, tc *schema.ToolCall, userId string, to
 			toolHandler.knowledgeError = toolErr.Error()
 			toolHandler.mu.Unlock()
 		} else {
+			toolHandler.mu.Lock()
+			toolHandler.knowledgeResult = result
+			toolHandler.mu.Unlock()
+		}
+	} else if tc.Function.Name == "search_knowledge" {
+		g.Log().Info(ctx, "[search_knowledge] 调用工具, 参数: %s, userId: %s", argsJSON, userId)
+		searchTool := tools.SearchKnowledgeTool()
+		result, toolErr := searchTool.InvokableRun(ctxWithUserId, argsJSON)
+		if toolErr != nil {
+			g.Log().Error(ctx, "[search_knowledge] 执行失败: %v", toolErr)
+		} else {
+			g.Log().Info(ctx, "[search_knowledge] 执行成功, 结果: %s", result)
 			toolHandler.mu.Lock()
 			toolHandler.knowledgeResult = result
 			toolHandler.mu.Unlock()
@@ -395,28 +414,35 @@ func (c *ChatController) SendChatMessage(ctx context.Context, req *api.SendChatM
 		finalContent += msg.Content
 	}
 
-	if err := saveChatMessage(ctx, systemChatId, parsedUserId, finalContent, "assistant", toolHandler.GetTaskID()); err != nil {
-		g.Log().Error(ctx, "insert chat message failed: %v", err)
-		sendErrorResponse(r, "insert chat message failed")
-		return nil, err
-	}
-
 	knowledgeResult := toolHandler.GetKnowledgeResult()
 	knowledgeError := toolHandler.GetKnowledgeError()
 
 	if knowledgeResult != "" {
 		var kr map[string]interface{}
 		json.Unmarshal([]byte(knowledgeResult), &kr)
+
+		// 处理 add_knowledge 结果
 		if title, ok := kr["title"].(string); ok {
 			finalContent += "\n\n✅ 知识库添加成功：\n- 标题：" + title
 			if author, ok := kr["author"].(string); ok && author != "" {
 				finalContent += "\n- 作者：" + author
 			}
 		}
+
+		// 处理 search_knowledge 结果
+		if context, ok := kr["context"].(string); ok && context != "" {
+			finalContent += "\n\n" + context
+		}
 	}
 
 	if knowledgeError != "" {
 		finalContent += "\n\n❌ 添加知识库失败：" + knowledgeError
+	}
+
+	if err := saveChatMessage(ctx, systemChatId, parsedUserId, finalContent, "assistant", toolHandler.GetTaskID()); err != nil {
+		g.Log().Error(ctx, "insert chat message failed: %v", err)
+		sendErrorResponse(r, "insert chat message failed")
+		return nil, err
 	}
 
 	sendSSEEvent(r, "complete", systemChatId, finalContent, toolHandler.GetTaskID())

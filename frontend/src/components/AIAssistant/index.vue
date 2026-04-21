@@ -78,6 +78,7 @@ const customTagsArr = ref<CustomTag[]>([
       { id: "delete-task", name: "删除任务" },
       { id: "query-task", name: "查询任务" },
       { id: "add-knowledge", name: "添加知识库" },
+      { id: "search_knowledge", name: "查询知识库" },
     ],
   },
 ]);
