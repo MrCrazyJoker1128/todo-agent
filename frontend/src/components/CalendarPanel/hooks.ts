@@ -5,7 +5,7 @@
 import { ref, watch, onMounted, onUnmounted, nextTick } from "vue";
 import { ElMessage } from "element-plus";
 import { fetchGetTaskList, fetchUpdateTaskStatus } from "@/api/task";
-import type { TaskItem as ApiTaskItem } from "@/api/task/type";
+import type { TaskItem as ApiTaskItem, TaskType } from "@/api/task/type";
 
 /**
  * 优先级颜色配置
@@ -31,13 +31,15 @@ export interface Task {
   /** 任务标题 */
   title: string;
   /** 截止时间 */
-  deadline: string;
+  dueDate: string;
   /** 优先级 */
   priority: Priority;
   /** 任务类型 */
-  taskType: string;
+  taskType: TaskType;
   /** 任务状态 */
   status: "todo" | "doing" | "done" | "cancelled";
+  /** 任务描述 */
+  description: string;
 }
 
 /**
@@ -104,7 +106,9 @@ export function useTask() {
    * @param date - 日期对象
    * @returns 包含 startTime 和 endTime 的对象
    */
-  const getMonthRange = (date: Date): { startTime: string; endTime: string } => {
+  const getMonthRange = (
+    date: Date,
+  ): { startTime: string; endTime: string } => {
     const year = date.getFullYear();
     const month = date.getMonth();
     const startDate = new Date(year, month, 1);
@@ -120,7 +124,9 @@ export function useTask() {
    * @param dateStr - 日期字符串 YYYY-MM-DD
    * @returns 包含 startTime 和 endTime 的对象
    */
-  const getDayRange = (dateStr: string): { startTime: string; endTime: string } => {
+  const getDayRange = (
+    dateStr: string,
+  ): { startTime: string; endTime: string } => {
     return {
       startTime: `${dateStr} 00:00:00`,
       endTime: `${dateStr} 23:59:59`,
@@ -133,7 +139,7 @@ export function useTask() {
    * @returns 匹配的任务数组
    */
   const getTasksForDate = (date: string): Task[] => {
-    return tasks.value.filter((t) => t.deadline.startsWith(date));
+    return tasks.value.filter((t) => t.dueDate.startsWith(date));
   };
 
   /**
@@ -166,10 +172,11 @@ export function useTask() {
         .map((t: ApiTaskItem) => ({
           id: t.id,
           title: t.title,
-          deadline: t.dueDate,
+          dueDate: t.dueDate,
           priority: t.priority as Priority,
           taskType: t.taskType,
           status: t.status as Task["status"],
+          description: t.description,
         }));
     } catch (error) {
       ElMessage.error("获取任务列表失败");
@@ -198,10 +205,11 @@ export function useTask() {
         .map((t: ApiTaskItem) => ({
           id: t.id,
           title: t.title,
-          deadline: t.dueDate,
+          dueDate: t.dueDate,
           priority: t.priority as Priority,
           taskType: t.taskType,
           status: t.status as Task["status"],
+          description: t.description,
         }));
     } catch (error) {
       ElMessage.error("获取任务列表失败");
@@ -348,7 +356,10 @@ export function useScrollbarHeight() {
       if (tasksSectionRef.value && tasksHeaderRef.value) {
         const sectionHeight = tasksSectionRef.value.clientHeight;
         const headerHeight = tasksHeaderRef.value.clientHeight;
-        scrollbarHeight.value = Math.max(100, sectionHeight - headerHeight - 12);
+        scrollbarHeight.value = Math.max(
+          100,
+          sectionHeight - headerHeight - 12,
+        );
       }
     });
   };

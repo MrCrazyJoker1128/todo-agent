@@ -19,7 +19,7 @@ export type TaskStatus = "todo" | "doing" | "done" | "cancelled";
  * 任务类型
  * @type {string}
  */
-export type TaskType = string;
+export type TaskType = "work" | "personal" | "project" | "adhoc";
 
 /**
  * 创建任务请求参数
@@ -133,12 +133,6 @@ export interface UpdateTaskReq {
    * @type {string}
    */
   dueDate?: string;
-
-  /**
-   * 状态
-   * @type {TaskStatus}
-   */
-  status?: TaskStatus;
 }
 
 /**

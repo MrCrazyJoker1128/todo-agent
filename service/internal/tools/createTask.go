@@ -20,9 +20,9 @@ import (
 type CreateTaskArgs struct {
 	Title       string  `json:"title" jsonschema:"任务标题，必填"`
 	Description string  `json:"description" jsonschema:"任务详细描述，可选"`
-	DueDate     *string `json:"due_date" jsonschema:"截止时间，ISO 8601 格式，例如 2026-03-25T10:00:00Z"`
-	Priority    string  `json:"priority" jsonschema:"优先级：HIGH|MEDIUM|LOW，默认 MEDIUM"`
-	TaskType    string  `json:"task_type" jsonschema:"任务类型：work|personal|project|adhoc，默认 work"`
+	DueDate     *string `json:"dueDate" jsonschema:"截止时间，ISO 8601 格式，例如 2026-03-25T10:00:00Z"`
+	Priority    string `json:"priority" jsonschema:"优先级：HIGH|MEDIUM|LOW，默认 MEDIUM"`
+	TaskType    string `json:"taskType" jsonschema:"任务类型：work|personal|project|adhoc，默认 work"`
 }
 
 func CreateTask() tool.InvokableTool {
@@ -82,14 +82,18 @@ func createTask(ctx context.Context, input *CreateTaskArgs) (uuid.UUID, error) {
 
 	var dueDate *gtime.Time
 	if input.DueDate != nil && *input.DueDate != "" {
-		parsed, err := time.Parse(time.RFC3339, *input.DueDate)
-		if err != nil {
-			g.Log().Warning(ctx, "failed to parse due_date: %v, ignoring", err)
-		} else {
-			dueDate = gtime.NewFromTime(parsed)
+		formats := []string{time.RFC3339, "2006-01-02T15:04:05", "2006-01-02 15:04:05", "2006-01-02"}
+		for _, format := range formats {
+			if parsed, err := time.Parse(format, *input.DueDate); err == nil {
+				dueDate = gtime.NewFromTime(parsed.UTC())
+				break
+			}
+		}
+		if dueDate == nil {
+			g.Log().Warning(ctx, "无法解析日期格式: ", *input.DueDate)
 		}
 	}
-
+	g.Log().Info(ctx, "dueDate: ", dueDate)
 	if input.Priority == "" {
 		input.Priority = "MEDIUM"
 	}

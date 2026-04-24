@@ -59,7 +59,7 @@ func (d *dbChatMessagesDao) GetChatMessagesWithTask(ctx context.Context, userId 
 	model := g.Model("db_chat_messages").
 		As("cm").
 		LeftJoin("db_tasks t", "cm.related_task_id = t.id").
-		Fields("cm.id AS chatId, cm.role, cm.content AS chatContent, cm.related_task_id AS relatedTaskId, cm.created_at AS chatCreatedAt, t.id AS taskId, t.title, t.description, t.status, t.priority, t.due_date, t.task_type, t.priority_level, t.created_at AS taskCreatedAt, t.updated_at AS taskUpdatedAt").
+		Fields("cm.id AS chatId, cm.role, cm.content AS chatContent, cm.related_task_id AS relatedTaskId, cm.created_at AS chatCreatedAt, t.id AS taskId, t.title, t.description, t.status, t.priority, to_char(t.due_date at time zone 'UTC', 'YYYY-MM-DD HH24:MI:SS') as due_date, t.task_type, t.priority_level, t.created_at AS taskCreatedAt, t.updated_at AS taskUpdatedAt").
 		Where("cm.user_id = ?", userId).
 		Order("cm.created_at asc")
 	if req.PageIndex != 0 && req.PageSize != 0 {

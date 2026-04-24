@@ -80,7 +80,7 @@
                 <div class="task-meta">
                   <span class="deadline">
                     <i class="i-ep-time"></i>
-                    {{ task.deadline }}
+                    {{ task.dueDate }}
                   </span>
                 </div>
               </div>
@@ -94,6 +94,14 @@
                 >
                   <i class="i-ep-video-play"></i>
                   开始
+                </el-button>
+                <el-button
+                  size="small"
+                  type="primary"
+                  @click="handleEdit(task)"
+                >
+                  <i class="i-ep-edit"></i>
+                  编辑
                 </el-button>
                 <el-button
                   size="small"
@@ -113,6 +121,14 @@
                 >
                   <i class="i-ep-check"></i>
                   完成
+                </el-button>
+                <el-button
+                  size="small"
+                  type="primary"
+                  @click="handleEdit(task)"
+                >
+                  <i class="i-ep-edit"></i>
+                  编辑
                 </el-button>
                 <el-button
                   size="small"
@@ -141,6 +157,11 @@
         </div>
       </el-scrollbar>
     </div>
+    <UpdateTaskDialog
+      v-model:dialogVisible="dialogVisible"
+      ref="updateTaskDialogRef"
+      @success="refresh"
+    />
   </div>
 </template>
 
@@ -154,7 +175,9 @@ import {
   type Task,
 } from "./hooks";
 import eventBus from "@/utils/eventbus";
-
+defineOptions({
+  name: "CalendarPanel",
+});
 const emit = defineEmits<{
   (e: "task-click", task: Task): void;
 }>();
@@ -205,13 +228,28 @@ onMounted(() => {
   handleDateClick(todayStr);
   calculateScrollbarHeight();
 });
+watch(currentMonth, (newVal) => {
+  fetchTasks(newVal);
+});
 eventBus.on("sseComplete", () => {
   refresh();
 });
 const refresh = () => {
   fetchTasks(currentMonth.value);
 };
-
+const dialogVisible = ref(false);
+const updateTaskDialogRef = useTemplateRef("updateTaskDialogRef");
+function handleEdit(task: Task) {
+  dialogVisible.value = true;
+  updateTaskDialogRef.value?.setTaskForm({
+    id: task.id,
+    description: task.description,
+    title: task.title,
+    dueDate: task.dueDate,
+    priority: task.priority,
+    taskType: task.taskType,
+  });
+}
 defineExpose({
   refresh,
 });

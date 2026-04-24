@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"service/api"
 	"service/internal/dao"
@@ -62,6 +63,14 @@ func createChatModel(ctx context.Context) (model.ToolCallingChatModel, error) {
 
 // getSystemPrompt 获取系统提示词
 func getSystemPrompt() string {
+	now := time.Now()
+	currentDate := now.Format("2006-01-02")
+	year := now.Year()
+
+	// 下个月15号 (15th of next month)
+	nextMonth := now.AddDate(0, 1, 0)
+	nextMonthDay15 := fmt.Sprintf("%d-%02d-15", nextMonth.Year(), nextMonth.Month())
+
 	return `你是一个任务管理助手。你有以下工具可以使用：
 
 1. create_task - 创建新任务
@@ -91,11 +100,24 @@ func getSystemPrompt() string {
 - 例如："今天天气怎么样" → 直接回答；"添加任务明天开会" → 调用 create_task；"删除刚才创建的任务" → 调用 cancel_task；"把这个网址加入知识库" → 调用 add_knowledge
 
 **时间转换（北京时间 UTC+8）：**
-- 今天下午3点 = 2026-04-02T15:00:00+08:00
-- 明天上午10点 = 2026-04-03T10:00:00+08:00`
-}
+- 日期格式：YYYY-MM-DDTHH:MM:SS+08:00
+- 今天是 ` + currentDate + `
 
-// createAgent 创建 Agent
+**日期理解规则：**
+- "今天" = 今天是 ` + currentDate + `
+- "明天" = 今天 + 1天
+- "本周X" = 本周的星期X（周一~周日），如果今天已过本周X，则指下周X
+- "下周X" = 下周的星期X
+- "X月X日" 或 "X号" = 今年的该日期（如已过则为明年），如"5月20日" = ` + fmt.Sprintf("%d-05-20", year) + `
+- "下个月X号" = 下个月的第X天，如"下个月15号" = ` + nextMonthDay15 + `
+- 用户说"25号"、"20日"等，需结合上下文判断月份（本月/下月/特定月份）
+
+**重要：**
+- 提取日期时，必须根据上述规则准确计算
+- 只说"X号"时，优先理解为当前月，如果当天已过则理解为下个月
+- 日期时间默认设置为当天 09:00:00+08:00
+
+`}
 func createAgent(ctx context.Context, chatModel model.ToolCallingChatModel, systemPrompt string) (*react.Agent, *toolResultHandler, error) {
 	createTaskTool := tools.CreateTask()
 	cancelTaskTool := tools.CancelTask()
@@ -150,13 +172,17 @@ func executeToolCall(ctx context.Context, tc *schema.ToolCall, userId string, to
 	argsJSON := tc.Function.Arguments
 	ctxWithUserId := context.WithValue(ctx, "user_id", userId)
 
+	g.Log().Info(ctx, "[executeToolCall] 收到工具调用: name=%s, args=%s", tc.Function.Name, argsJSON)
+
 	if tc.Function.Name == "create_task" {
+		g.Log().Info(ctx, "[create_task] 开始执行")
 		createTaskTool := tools.CreateTask()
 		result, toolErr := createTaskTool.InvokableRun(ctxWithUserId, argsJSON)
 		if toolErr != nil {
 			g.Log().Error(ctx, "create_task failed: %v", toolErr)
 			return
 		}
+		g.Log().Info(ctx, "[create_task] 执行成功, result=%s", result)
 
 		var taskIdStr string
 		json.Unmarshal([]byte(result), &taskIdStr)
@@ -164,6 +190,7 @@ func executeToolCall(ctx context.Context, tc *schema.ToolCall, userId string, to
 			toolHandler.mu.Lock()
 			toolHandler.createdTaskID = id
 			toolHandler.mu.Unlock()
+			g.Log().Info(ctx, "[create_task] taskID=%s", id)
 		}
 	} else if tc.Function.Name == "cancel_task" {
 		cancelTaskTool := tools.CancelTask()

@@ -44,9 +44,15 @@ func (c *TaskController) CreateTask(ctx context.Context, req *api.CreateTaskReq)
 	milvusVectorId := uuid.New()
 	var dueDate *gtime.Time
 	if req.DueDate != "" {
-		t, err := time.Parse("2006-01-02 15:04:05", req.DueDate)
-		if err == nil {
-			dueDate = gtime.NewFromTime(t)
+		formats := []string{time.RFC3339, "2006-01-02T15:04:05", "2006-01-02 15:04:05", "2006-01-02"}
+		for _, format := range formats {
+			if parsed, err := time.Parse(format, req.DueDate); err == nil {
+				dueDate = gtime.NewFromTime(parsed.UTC())
+				break
+			}
+		}
+		if dueDate == nil {
+			g.Log().Warning(ctx, "无法解析日期格式: ", req.DueDate)
 		}
 	}
 	tx, err := dao.DbTasks.InsertTask(ctx, &entity.DbTasks{
@@ -115,11 +121,18 @@ func (c *TaskController) UpdateTask(ctx context.Context, req *api.UpdateTaskReq)
 	milvusVectorId := uuid.New()
 	var dueDate *gtime.Time
 	if req.DueDate != "" {
-		t, err := time.Parse("2006-01-02 15:04:05", req.DueDate)
-		if err == nil {
-			dueDate = gtime.NewFromTime(t)
+		formats := []string{time.RFC3339, "2006-01-02T15:04:05", "2006-01-02 15:04:05", "2006-01-02"}
+		for _, format := range formats {
+			if parsed, err := time.Parse(format, req.DueDate); err == nil {
+				dueDate = gtime.NewFromTime(parsed.UTC())
+				break
+			}
+		}
+		if dueDate == nil {
+			g.Log().Warning(ctx, "无法解析日期格式: ", req.DueDate)
 		}
 	}
+	g.Log().Info(ctx, "dueDate: %+v", dueDate)
 	tx, err := dao.DbTasks.UpdateTask(ctx, &entity.DbTasks{
 		Id:             Id,
 		Title:          req.Title,
@@ -133,24 +146,6 @@ func (c *TaskController) UpdateTask(ctx context.Context, req *api.UpdateTaskReq)
 		if tx != nil {
 			tx.Rollback()
 		}
-		g.Log().Error(ctx, err)
-		return nil, err
-	}
-	r := g.RequestFromCtx(ctx)
-	userId := r.GetParam("userId").String()
-	docs := []*schema.Document{
-		{
-			ID:      milvusVectorId.String(),
-			Content: req.Title + "-" + req.Description,
-			MetaData: map[string]any{
-				"userId": userId,
-				"date":   dueDate,
-			},
-		},
-	}
-	_, err = StoreIndex(ctx, docs)
-	if err != nil {
-		tx.Rollback()
 		g.Log().Error(ctx, err)
 		return nil, err
 	}

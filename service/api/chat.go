@@ -23,7 +23,7 @@ type ChatMessageWithTask struct {
 	Description   *string     `json:"description"`
 	Status        *string     `json:"status"`
 	Priority      *string     `json:"priority"`
-	DueDate       *gtime.Time `json:"dueDate"`
+	DueDate       string `json:"dueDate"`
 	TaskType      *string     `json:"taskType"`
 	PriorityLevel *string     `json:"priorityLevel"`
 	TaskCreatedAt *gtime.Time `json:"taskCreatedAt"`

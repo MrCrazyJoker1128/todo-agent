@@ -9,6 +9,7 @@ import (
 	"service/api"
 	"service/internal/dao/internal"
 	"service/internal/model/entity"
+	"strings"
 
 	"github.com/gogf/gf/v2/database/gdb"
 	"github.com/gogf/gf/v2/frame/g"
@@ -80,7 +81,6 @@ func (dao *dbTasksDao) UpdateTask(ctx context.Context, task *entity.DbTasks) (gd
 		"task_type":        task.TaskType,
 		"due_date":         task.DueDate,
 		"milvus_vector_id": task.MilvusVectorId,
-		"status":           task.Status,
 		"updated_at":       gtime.Now(),
 	}
 	_, err = tx.Model("db_tasks").Data(data).Where("id", task.Id).Update()
@@ -135,12 +135,16 @@ func (dao *dbTasksDao) UpdateTaskStatus(ctx context.Context, taskId string, stat
 // 获取任务列表
 func (dao *dbTasksDao) GetTaskList(ctx context.Context, req *api.GetTaskListReq, userId uuid.UUID) ([]*api.TaskItem, error) {
 	model := g.Model("db_tasks").
+		Fields("id, title, description, priority, task_type, status, to_char(due_date at time zone 'UTC', 'YYYY-MM-DD HH24:MI:SS') as due_date").
 		Where("user_id = ?", userId).
 		Where("is_deleted = ?", false).
 		Order("created_at desc")
 
 	if req.StartTime != "" && req.EndTime != "" {
-		model = model.Where("due_date >= ? and due_date <= ?", req.StartTime, req.EndTime)
+		startTime := strings.ReplaceAll(req.StartTime, "+", " ")
+		endTime := strings.ReplaceAll(req.EndTime, "+", " ")
+		g.Log().Info(ctx, "查询时间范围: startTime=%s, endTime=%s", startTime, endTime)
+		model = model.Where("due_date >= timestamptz(? || ' UTC') and due_date <= timestamptz(? || ' UTC')", startTime, endTime)
 	}
 	if req.TaskType != "" {
 		model = model.Where("task_type = ?", req.TaskType)
