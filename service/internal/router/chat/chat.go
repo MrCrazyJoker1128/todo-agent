@@ -12,5 +12,8 @@ func RegisterRoutes(group *ghttp.RouterGroup) {
 		group.GET("/list", chatController.GetChatList)
 		group.POST("/insert", chatController.InsertChatMessage)
 		group.POST("/send", chatController.SendChatMessage)
+		group.Group("/ws", func(group *ghttp.RouterGroup) {
+			group.GET("/echo", chatController.EchoWebSocket)
+		})
 	})
 }

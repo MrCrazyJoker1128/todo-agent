@@ -76,6 +76,25 @@ func (d *dbChatMessagesDao) GetChatMessagesWithTask(ctx context.Context, userId 
 	return results, total, nil
 }
 
+// GetLatestMessages 取用户最近 N 条消息（按 created_at 倒序取 N 条再翻回正序保对话顺序）。
+// GetChatMessagesByUserId 是正序分页取头，只适合前端全量回放；agent 历史要的是尾部。
+func (d *dbChatMessagesDao) GetLatestMessages(ctx context.Context, userId string, n int) ([]*entity.DbChatMessages, error) {
+	var desc []*entity.DbChatMessages
+	err := g.Model("db_chat_messages").
+		Where("user_id", userId).
+		Order("created_at desc").
+		Limit(n).
+		Scan(&desc)
+	if err != nil {
+		return nil, err
+	}
+	msgs := make([]*entity.DbChatMessages, 0, len(desc))
+	for i := len(desc) - 1; i >= 0; i-- {
+		msgs = append(msgs, desc[i])
+	}
+	return msgs, nil
+}
+
 func (d *dbChatMessagesDao) InsertChatMessage(ctx context.Context, chatMessage *entity.DbChatMessages) error {
 	data := g.Map{
 		"id":      chatMessage.Id,

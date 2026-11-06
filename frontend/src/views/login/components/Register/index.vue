@@ -77,18 +77,22 @@ function handleClose(): void {
 <style scoped lang="scss">
 .register-dialog {
   :deep(.el-dialog) {
-    border-radius: 16px;
+    border-radius: var(--radius);
+    background: var(--surface-3);
+    border: 1px solid var(--line);
   }
 
   :deep(.el-dialog__header) {
     padding: 20px 24px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--line-soft);
   }
 
   :deep(.el-dialog__title) {
-    font-size: 18px;
-    font-weight: 600;
-    color: #2c3e50;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--text-1);
+    font-family: var(--font-display);
   }
 
   :deep(.el-dialog__body) {
@@ -97,25 +101,30 @@ function handleClose(): void {
 
   :deep(.el-dialog__footer) {
     padding: 16px 24px;
-    border-top: 1px solid #f0f0f0;
+    border-top: 1px solid var(--line-soft);
   }
-}
-
-.el-form-item {
-  margin-bottom: 20px;
 
   :deep(.el-input__wrapper) {
-    border-radius: 12px;
-    padding: 12px 16px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-    transition: all 0.3s;
+    background: var(--surface-0);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    box-shadow: none;
 
     &:hover {
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      border-color: var(--brand-line);
     }
 
     &.is-focus {
-      box-shadow: 0 4px 16px rgba(255, 138, 128, 0.2);
+      border-color: var(--brand);
+      box-shadow: 0 0 0 2px var(--brand-dim);
+    }
+  }
+
+  :deep(.el-input__inner) {
+    color: var(--text-1);
+
+    &::placeholder {
+      color: var(--text-3);
     }
   }
 }
@@ -124,20 +133,5 @@ function handleClose(): void {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-
-  .el-button {
-    border-radius: 8px;
-  }
-
-  .el-button--primary {
-    background: linear-gradient(135deg, #ff8a80 0%, #ff5252 100%);
-    border: none;
-    box-shadow: 0 4px 16px rgba(255, 138, 128, 0.4);
-
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(255, 138, 128, 0.5);
-    }
-  }
 }
 </style>

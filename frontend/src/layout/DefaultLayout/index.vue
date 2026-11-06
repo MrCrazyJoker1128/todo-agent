@@ -1,9 +1,13 @@
 <template>
-  <div class="layout-container">
-    <BaseHeader title="AI TODO Agent" />
+  <div class="wb-scope wb-workbench">
+    <BaseHeader title="TODO OPS" />
 
-    <div class="layout-body">
-      <TaskPanel />
+    <div class="wb-body">
+      <NavRail :sys-ok="sysOk" />
+
+      <section class="wb-main">
+        <router-view />
+      </section>
 
       <AIAssistant>
         <template #chat-messages>
@@ -16,12 +20,14 @@
 
 <script setup lang="ts">
 import BaseHeader from "@/components/BaseHeader/index.vue";
-import TaskPanel from "@/components/TaskPanel/index.vue";
+import NavRail from "@/components/NavRail/index.vue";
 import AIAssistant from "@/components/AIAssistant/index.vue";
 import { useUserStore } from "@/store/user";
 
 const userStore = useUserStore();
 const router = useRouter();
+
+const sysOk = ref(true);
 
 async function checkUserInfo() {
   const success = await userStore.getUserInfo();
@@ -33,30 +39,34 @@ checkUserInfo();
 </script>
 
 <style scoped lang="scss">
-.layout-container {
+.wb-workbench {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background: linear-gradient(135deg, #fff5f5 0%, #fff0ed 40%, #ffe8e6 100%);
-  position: relative;
+  background:
+    radial-gradient(1200px 500px at 70% -10%, rgba(94, 234, 212, 0.06), transparent 60%),
+    radial-gradient(900px 500px at 0% 110%, rgba(96, 165, 250, 0.05), transparent 60%),
+    var(--wb-bg);
+  color: var(--wb-text);
+  font-family: var(--wb-font-body);
+  overflow: hidden;
 }
 
-@keyframes float {
-  0%,
-  100% {
-    transform: translate(0, 0) rotate(0deg);
-  }
-  33% {
-    transform: translate(30px, -30px) rotate(120deg);
-  }
-  66% {
-    transform: translate(-20px, 20px) rotate(240deg);
-  }
-}
-
-.layout-body {
+.wb-body {
   display: flex;
   flex: 1;
-  overflow: hidden;
+  min-height: 0;
+}
+
+.wb-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--wb-bg);
+  background-image:
+    linear-gradient(rgba(94, 234, 212, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(94, 234, 212, 0.025) 1px, transparent 1px);
+  background-size: 28px 28px;
 }
 </style>

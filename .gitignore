@@ -1,0 +1,26 @@
+# 依赖与构建产物
+node_modules/
+dist/
+*.local
+
+# 本地运行配置（复制 .example 文件后按自己环境改，不入库）
+frontend/.env.development
+frontend/.env.production
+.env
+!.env.example
+service/manifest/config/config.yaml
+service/hack/config.yaml
+
+# 二进制与日志
+service/bin/
+service/main
+service/main.exe
+service/output/
+service/temp/
+*.log
+
+# 系统与编辑器
+.DS_Store
+.idea/
+.vscode/
+*.swp

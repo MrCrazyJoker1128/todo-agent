@@ -8,8 +8,9 @@ import (
 )
 
 type AddKnowledgeReq struct {
-	g.Meta `method:"POST" path:"/add" summary:"添加知识库" tags:"知识库"`
-	Url    string `json:"url" validate:"required" description:"知识库链接"`
+	g.Meta    `method:"POST" path:"/add" summary:"添加知识库" tags:"知识库"`
+	Url       string `json:"url" validate:"required" description:"知识库链接"`
+	LibraryId string `json:"libraryId" validate:"required" description:"归属库ID，新UI必传"`
 }
 
 type AddKnowledgeRes struct {
@@ -46,4 +47,63 @@ type DeleteKnowledgeUrlReq struct {
 }
 type DeleteKnowledgeUrlRes struct {
 	Message string `json:"message"`
+}
+type CreateBaseReq struct {
+	g.Meta      `method:"POST" path:"/bases" summary:"新建知识库" tags:"知识库"`
+	LibraryName string `json:"libraryName" validate:"required" description:"库名"`
+	Description string `json:"description" description:"库描述"`
+}
+type CreateBaseRes struct {
+	Id uuid.UUID `json:"id"`
+}
+type KnowledgeBaseItem struct {
+	Id          uuid.UUID `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	CreatedAt   time.Time `json:"createdAt"`
+}
+type ListBasesRes struct {
+	Items []*KnowledgeBaseItem `json:"items"`
+}
+type ListBasesReq struct {
+	g.Meta `method:"GET" path:"/bases" summary:"知识库列表" tags:"知识库"`
+}
+type DeleteBaseReq struct {
+	g.Meta `method:"DELETE" path:"/bases/delete" summary:"删除知识库" tags:"知识库"`
+	Id     string `json:"id" validate:"required" description:"库ID"`
+}
+type DeleteBaseRes struct {
+	Message string `json:"message"`
+}
+type KnowledgeFileItem struct {
+	Id         string `json:"id"`
+	Title      string `json:"title"`
+	Source     string `json:"source"`
+	ChunkCount int    `json:"chunkCount"`
+	CreatedAt  string `json:"createdAt"`
+	Status     string `json:"status"`
+	Error      string `json:"error"`
+}
+type ListFilesRes struct {
+	Items []*KnowledgeFileItem `json:"items"`
+}
+type ListFilesReq struct {
+	g.Meta    `method:"GET" path:"/files" summary:"某库文件列表" tags:"知识库"`
+	LibraryId string `json:"libraryId" validate:"required" description:"库ID"`
+}
+type DeleteFileReq struct {
+	g.Meta    `method:"DELETE" path:"/files/delete" summary:"删除库内文件" tags:"知识库"`
+	LibraryId string `json:"libraryId" validate:"required" description:"库ID"`
+	Source    string `json:"source" validate:"required" description:"文件标识：html地址原文或 md://…"`
+}
+type DeleteFileRes struct {
+	Message string `json:"message"`
+}
+type UploadMdReq struct {
+	g.Meta    `method:"POST" path:"/upload" summary:"上传md文件到库" tags:"知识库"`
+	LibraryId string `json:"libraryId" validate:"required" description:"库ID"`
+}
+type UploadMdRes struct {
+	Title  string `json:"title"`
+	Source string `json:"source"`
 }

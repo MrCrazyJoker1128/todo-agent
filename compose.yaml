@@ -1,0 +1,120 @@
+ # 一键启动：PG（含 zhparser/pgvector）+ ES8 + Redis + Ollama + App，全进容器。
+ # 宿主机零依赖：只要 Docker。数据落四个命名卷，down 不丢（加 -v 才清）。
+ # 用法：
+ #   1. cp .env.example .env（如需改密码/端口，避开宿主机已占用的）
+ #   2. docker compose up -d --build     # 首次构建 app/postgres 镜像 + 拉 ES/Redis/ollama，十几分钟
+ #   3. 灌嵌入模型（ollama 卷空的，一次即可）：docker compose exec ollama ollama pull qwen3-embedding:8b
+ #   4. 浏览器开 http://localhost:8080，注册账号；设置页配对话模型 Key
+ #
+ # 已有本地 PG 想复用：config.docker.yaml 里 PG host 改 host.docker.internal，
+ # app 加 extra_hosts（见下注释掉的段），compose 的 postgres 照旧留着不用。
+
+services:
+  postgres:
+    build:
+      context: .
+      dockerfile: service/Dockerfile.postgres
+    image: todo-agent-postgres:17
+    container_name: todo-agent-postgres
+    environment:
+      POSTGRES_USER: ${PG_USER:-postgres}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-postgres123}
+      POSTGRES_DB: ${PG_DB:-todo-agent}
+    ports:
+      - "${PG_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./sql/init-compose.sh:/docker-entrypoint-initdb.d/00-init.sh:ro
+      - ./sql/schema.sql:/docker-entrypoint-initdb.d/schema/00-schema.sql:ro
+      - ./sql/migration_system_configs.sql:/docker-entrypoint-initdb.d/schema/10-system.sql:ro
+      - ./sql/migration_model_configs.sql:/docker-entrypoint-initdb.d/schema/20-model.sql:ro
+      - ./sql/migration_model_gen_params.sql:/docker-entrypoint-initdb.d/schema/30-genparams.sql:ro
+      - ./sql/migration_model_nullable.sql:/docker-entrypoint-initdb.d/schema/35-model-nullable.sql:ro
+      - ./sql/migration_embed_config.sql:/docker-entrypoint-initdb.d/schema/40-embed.sql:ro
+      - ./sql/migration_embed_nullable.sql:/docker-entrypoint-initdb.d/schema/45-embed-nullable.sql:ro
+      - ./sql/migration_knowledge_bases.sql:/docker-entrypoint-initdb.d/schema/50-kb.sql:ro
+      - ./sql/migration_task_summaries.sql:/docker-entrypoint-initdb.d/schema/60-tasksum.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER:-postgres} -d ${PG_DB:-todo-agent}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+  elasticsearch:
+    image: elasticsearch:8.18.0
+    container_name: todo-agent-es
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    ports:
+      - "${ES_PORT:-9200}:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200 >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: todo-agent-redis
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-redis123}"]
+    ports:
+      - "${REDIS_PORT:-6380}:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis123}", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.local
+    image: todo-agent:local
+    container_name: todo-agent-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    environment:
+      # KEK 走库（db_system_configs），容器不需要再传；留空则用库里已配的值。
+      MODEL_KEY_ENC_KEY: ${MODEL_KEY_ENC_KEY:-}
+    volumes:
+      # 本地 config 挂载（见 config.docker.yaml 注释）。
+      - ./service/manifest/config/config.docker.yaml:/app/manifest/config/config.yaml:ro
+    restart: unless-stopped
+  ollama:
+    image: ollama/ollama:latest
+    container_name: todo-agent-ollama
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ollama:/root/.ollama
+    restart: unless-stopped
+    # 模型首次手动灌：docker compose exec ollama ollama pull qwen3-embedding:8b
+
+    # 健康检查靠业务口：GET /api/user/userInfo 未登录返回 401 即存活
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8080/api/user/userInfo"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+volumes:
+  pgdata:
+  esdata:
+  redisdata:
+  ollama:

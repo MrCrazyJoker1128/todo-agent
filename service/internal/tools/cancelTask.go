@@ -71,9 +71,15 @@ func cancelTask(ctx context.Context, input *CancelTaskTool) (string, error) {
 		}
 		taskIdToCancel = task.Id.String()
 	}
-
-	err := dao.DbTasks.DeleteTask(ctx, taskIdToCancel)
+	// 已完成/已取消的任务不允许取消（候选已过滤此处防绕过）。
+	existing, err := dao.DbTasks.GetTask(ctx, taskIdToCancel)
 	if err != nil {
+		return "", err
+	}
+	if existing == nil || existing.Status == "done" || existing.Status == "cancelled" {
+		return "", errors.New("该任务已完成或已取消不能取消")
+	}
+	if err := dao.DbTasks.DeleteTask(ctx, taskIdToCancel); err != nil {
 		return "", err
 	}
 	return "任务已取消", nil

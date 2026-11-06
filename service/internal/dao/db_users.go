@@ -6,6 +6,7 @@ package dao
 
 import (
 	"context"
+	"errors"
 	"service/api"
 	"service/internal/dao/internal"
 	"service/internal/model/entity"
@@ -13,6 +14,12 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/google/uuid"
 )
+
+// ErrEmailTaken 邮箱已被其他用户注册。
+var ErrEmailTaken = errors.New("邮箱已被注册")
+
+// ErrPasswordMismatch 旧密码不正确。
+var ErrPasswordMismatch = errors.New("旧密码不正确")
 
 // dbUsersDao is the data access object for the table db_users.
 // You can define custom methods on it to extend its functionality as needed.
@@ -68,4 +75,49 @@ func (dao *dbUsersDao) GetUserById(ctx context.Context, id string) (*entity.DbUs
 		return nil, err
 	}
 	return &dbUser, nil
+}
+
+// UpdateProfile 更新昵称/邮箱：nickname 为空表示不改；email 为空表示不改，
+// 非空时检查是否被其他用户占用（占用返回 ErrEmailTaken，上层转 400）。
+func (dao *dbUsersDao) UpdateProfile(ctx context.Context, id string, nickname, email string) error {
+	if nickname == "" && email == "" {
+		return nil
+	}
+	data := g.Map{}
+	if nickname != "" {
+		data["nickname"] = nickname
+	}
+	if email != "" {
+		existing, err := dao.GetUserByEmail(ctx, email)
+		if err != nil {
+			return err
+		}
+		if existing != nil && existing.Id.String() != id {
+			return ErrEmailTaken
+		}
+		data["email"] = email
+	}
+	_, err := g.Model("db_users").Ctx(ctx).Where("id", id).Data(data).Update()
+	return err
+}
+
+// UpdatePassword 校验旧密码后更新为新密码。旧密码不对返回 ErrPasswordMismatch。
+// 注意：password_hash 当前明文存储（历史行为），此处保持一致，不引入哈希。
+func (dao *dbUsersDao) UpdatePassword(ctx context.Context, id, oldPassword, newPassword string) error {
+	result, err := g.Model("db_users").Ctx(ctx).Where("id", id).One()
+	if err != nil {
+		return err
+	}
+	if result == nil {
+		return errors.New("没有找到用户，请先登录")
+	}
+	var dbUser entity.DbUsers
+	if err := result.Struct(&dbUser); err != nil {
+		return err
+	}
+	if dbUser.PasswordHash != oldPassword {
+		return ErrPasswordMismatch
+	}
+	_, err = g.Model("db_users").Ctx(ctx).Where("id", id).Data(g.Map{"password_hash": newPassword}).Update()
+	return err
 }

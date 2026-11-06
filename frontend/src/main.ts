@@ -1,13 +1,13 @@
 import { createApp } from "vue";
 import "virtual:uno.css";
 import "element-plus/theme-chalk/src/index.scss";
+import "./style/theme.css";
 import "./style/element-plus.scss";
-import "./style.css";
+import "./style/workbench.scss";
 import App from "./App.vue";
 import router from "./router";
 import pinia from "./store";
 import * as ElementPlusIconsVue from "@element-plus/icons-vue";
-
 const app = createApp(App);
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
   app.component(key, component);

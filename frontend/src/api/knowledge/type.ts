@@ -128,6 +128,8 @@ export interface CreateKnowledgeUrlRequest {
    * @example 'https://juejin.cn/post/7504247651577479180'
    */
   url?: string;
+  /** 归属库ID，新UI必传 */
+  libraryId: string;
 }
 
 /**
@@ -139,4 +141,29 @@ export interface CreateKnowledgeUrlResponse {
    * 创建成功的知识库记录 ID (UUID)
    */
   id?: string;
+}
+
+/**
+ * 知识库（目录）
+ * @interface
+ */
+export interface KnowledgeLibrary {
+  id: string;
+  name: string;
+  description: string;
+  createdAt: string;
+}
+
+/**
+ * 库文件
+ * @interface
+ */
+export interface KnowledgeFile {
+  id: string;
+  title: string;
+  source: string;
+  chunkCount: number;
+  createdAt: string;
+  status?: string;
+  error?: string;
 }

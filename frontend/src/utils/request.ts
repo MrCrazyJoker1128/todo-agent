@@ -47,6 +47,13 @@ service.interceptors.request.use(
         ...config.params,
         _t: Date.now(),
       };
+    } else if (config.data instanceof FormData) {
+      // 文件上传：不展平 FormData；去掉 JSON 头让 axios 自动带 multipart boundary。
+      const headers = config.headers;
+      if (headers && "delete" in headers) {
+        const del = headers.delete;
+        if (typeof del === "function") del.call(headers, "Content-Type");
+      }
     } else {
       config.data = {
         ...config.data,

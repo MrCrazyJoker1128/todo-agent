@@ -1,11 +1,23 @@
 <template>
-  <div class="task-item" :class="{ cancelled: task.status === 'cancelled', done: task.status === 'done' }">
+  <div
+    class="task-item"
+    :class="{
+      cancelled: task.status === 'cancelled',
+      done: task.status === 'done',
+    }"
+  >
     <div class="task-main">
       <div class="task-left">
         <div class="task-info">
           <div class="task-title-row">
-            <span class="task-title" :class="{ completed: task.status === 'done' }">{{ task.title }}</span>
-            <el-tag :type="priorityType" size="small" effect="plain">{{ priorityLabel }}</el-tag>
+            <span
+              class="task-title"
+              :class="{ completed: task.status === 'done' }"
+              >{{ task.title }}</span
+            >
+            <el-tag :type="priorityType" size="small" effect="plain">{{
+              priorityLabel
+            }}</el-tag>
             <el-tag size="small" effect="plain">{{ taskTypeLabel }}</el-tag>
           </div>
           <div class="task-meta">
@@ -18,6 +30,10 @@
       </div>
       <div class="task-actions">
         <template v-if="task.status === 'todo'">
+          <el-button size="small" type="primary" @click="handleUpdate">
+            <i class="i-ep-video-play"></i>
+            编辑
+          </el-button>
           <el-button size="small" type="primary" @click="handleStart">
             <i class="i-ep-video-play"></i>
             开始
@@ -57,6 +73,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { ElMessage } from "element-plus";
+import eventBus from "@/utils/eventbus";
 import { fetchUpdateTaskStatus } from "@/api/task";
 
 interface Task {
@@ -74,6 +91,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: "update", updatedTask: Task): void;
+  (e: "updateTask"): void;
 }>();
 
 type TagType = "primary" | "success" | "warning" | "info" | "danger";
@@ -119,6 +137,7 @@ const handleDone = async () => {
   try {
     await fetchUpdateTaskStatus({ id: props.task.id, status: "done" });
     emit("update", { ...props.task, status: "done" });
+    eventBus.emit("task-changed");
     ElMessage.success("任务已完成");
   } catch {
     ElMessage.error("更新状态失败");
@@ -129,35 +148,58 @@ const handleCancel = async () => {
   try {
     await fetchUpdateTaskStatus({ id: props.task.id, status: "cancelled" });
     emit("update", { ...props.task, status: "cancelled" });
+    eventBus.emit("task-changed");
     ElMessage.success("任务已取消");
   } catch {
     ElMessage.error("取消任务失败");
   }
 };
+function handleUpdate() {
+  emit("updateTask");
+}
 </script>
 
 <style scoped lang="scss">
 .task-item {
-  padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.9);
+  position: relative;
+  padding: 10px 12px 10px 34px;
+  background: var(--wb-panel);
   border-radius: 8px;
-  border: 1px solid rgba(255, 138, 128, 0.2);
-  transition: all 0.3s;
+  border: 1px solid var(--wb-line-soft);
+  border-left: 2px solid var(--wb-blue);
+  transition: border-color 0.2s, background 0.2s;
 
   &:hover {
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    border-color: var(--wb-line);
+    border-left-color: var(--wb-accent);
+    background: var(--wb-panel-2);
+  }
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    margin: -3.5px 0 0 -3.5px;
+    border-radius: 50%;
+    background: var(--wb-blue);
   }
 
   &.done {
-    opacity: 0.7;
-    background: rgba(103, 194, 58, 0.05);
-    border-color: rgba(103, 194, 58, 0.2);
+    opacity: 0.55;
+    border-left-color: var(--wb-green);
+    &::before {
+      background: var(--wb-green);
+    }
   }
-
   &.cancelled {
-    opacity: 0.6;
-    background: rgba(144, 147, 153, 0.05);
-    border-color: rgba(144, 147, 153, 0.2);
+    opacity: 0.45;
+    border-left-color: var(--wb-text-3);
+    &::before {
+      background: var(--wb-text-3);
+    }
   }
 }
 
@@ -165,13 +207,13 @@ const handleCancel = async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
 }
 
 .task-left {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 10px;
   flex: 1;
   min-width: 0;
 }
@@ -179,7 +221,7 @@ const handleCancel = async () => {
 .task-info {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
   min-width: 0;
   flex: 1;
 }
@@ -192,35 +234,57 @@ const handleCancel = async () => {
 }
 
 .task-title {
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 500;
-  color: #303133;
-
+  color: var(--wb-text);
   &.completed {
     text-decoration: line-through;
-    color: #909399;
+    color: var(--wb-text-3);
   }
-}
-
-.priority-tag,
-.type-tag,
-.status-tag {
-  flex-shrink: 0;
 }
 
 .task-meta {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
+:deep(.el-tag) {
+  font-family: var(--wb-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  border-radius: 4px;
+  background: var(--wb-panel-3);
+  border-color: var(--wb-line);
+  color: var(--wb-text-2);
+}
+:deep(.el-tag--danger) {
+  background: rgba(248, 113, 113, 0.1);
+  border-color: rgba(248, 113, 113, 0.3);
+  color: var(--wb-red);
+}
+:deep(.el-tag--warning) {
+  background: var(--wb-amber-dim);
+  border-color: rgba(251, 191, 36, 0.3);
+  color: var(--wb-amber);
+}
+:deep(.el-tag--success) {
+  background: rgba(52, 211, 153, 0.1);
+  border-color: rgba(52, 211, 153, 0.3);
+  color: var(--wb-green);
+}
+:deep(.el-tag--primary) {
+  background: var(--wb-accent-dim);
+  border-color: var(--wb-accent-line);
+  color: var(--wb-accent);
+}
 .deadline {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
-  color: #909399;
-
+  font-size: 11px;
+  font-family: var(--wb-font-mono);
+  color: var(--wb-text-3);
   i {
     font-size: 12px;
   }
@@ -231,37 +295,19 @@ const handleCancel = async () => {
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
-
-  .el-button {
-    padding: 6px 8px;
-    min-width: 28px;
-  }
+  opacity: 0;
+  transition: opacity 0.2s;
 }
-
-.done-icon {
-  font-size: 20px;
-  color: #67c23a;
-}
-
-.cancelled-icon {
-  font-size: 20px;
-  color: #909399;
+.task-item:hover .task-actions {
+  opacity: 1;
 }
 
 @media (max-width: 640px) {
+  .task-actions {
+    opacity: 1;
+  }
   .task-item {
-    padding: 12px;
-  }
-
-  .task-title-row {
-    gap: 6px;
-  }
-
-  .priority-tag,
-  .type-tag,
-  .status-tag {
-    font-size: 10px;
-    padding: 0 4px;
+    padding: 10px 10px 10px 30px;
   }
 }
 </style>

@@ -12,6 +12,7 @@ import (
 var WhiteList = []string{
 	"/api/user/login",
 	"/api/user/register",
+	"/api/chat/ws/echo",
 	"/api.json",
 	"/swagger",
 }

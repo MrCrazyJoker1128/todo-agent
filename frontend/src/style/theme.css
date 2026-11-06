@@ -1,0 +1,75 @@
+/* 全局主题变量：唯一来源
+ * element-plus.scss / uno.config.ts / 所有组件 scss 只引用这些 var，不再写死色值
+ * --brand-* : 品牌主色（青）/ --status-* : 语义色 / --surface-* : 界面层级
+ */
+:root {
+  /* 品牌 */
+  --brand: #5eead4;
+  --brand-strong: #7df0dc;
+  --brand-100: #d6fbf4;
+  --brand-200: #c2f9ee;
+  --brand-300: #9df5e5;
+  --brand-deep: #0e3f3a;
+  --brand-ink: #06231e;
+  --brand-dim: rgba(94, 234, 212, 0.12);
+  --brand-line: rgba(94, 234, 212, 0.35);
+  --brand-glow: rgba(94, 234, 212, 0.6);
+
+  /* 语义 */
+  --status-amber: #fbbf24;
+  --status-amber-dim: rgba(251, 191, 36, 0.12);
+  --status-red: #f87171;
+  --status-red-dim: rgba(248, 113, 113, 0.12);
+  --status-green: #34d399;
+  --status-green-dim: rgba(52, 211, 153, 0.12);
+  --status-blue: #60a5fa;
+
+  /* 界面：深空 */
+  --surface-0: #07090e;
+  --surface-1: #0b0e14;
+  --surface-2: #12161f;
+  --surface-3: #151b26;
+  --surface-4: #1a2230;
+  --line: #232c3d;
+  --line-soft: #1b2331;
+
+  /* 文字 */
+  --text-1: #e6edf6;
+  --text-2: #9aa7bd;
+  --text-3: #5d6b82;
+
+  /* 字体 */
+  --font-display: "Sora", "Noto Sans SC", system-ui, sans-serif;
+  --font-body: "Noto Sans SC", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --radius: 10px;
+}
+
+/* 基础页面重置：深色底防闪白，标题/段落 margin 归零防塌陷透白边 */
+html {
+  background: var(--surface-1);
+}
+html,
+body,
+#app {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+body {
+  background: var(--surface-1);
+  color: var(--text-1);
+  font-family: var(--font-body);
+}
+h1,
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+}
+img {
+  display: block;
+  max-width: 100%;
+}

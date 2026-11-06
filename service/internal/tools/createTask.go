@@ -42,7 +42,7 @@ func CreateTask() tool.InvokableTool {
 						Type:     "string",
 						Required: false,
 					},
-					"due_date": {
+					"dueDate": {
 						Desc:     "截止时间，ISO 8601 格式，例如 2026-03-25T10:00:00Z",
 						Type:     "string",
 						Required: false,
@@ -53,7 +53,7 @@ func CreateTask() tool.InvokableTool {
 						Required: false,
 						Enum:     []string{"HIGH", "MEDIUM", "LOW"},
 					},
-					"task_type": {
+					"taskType": {
 						Desc:     "任务类型",
 						Type:     "string",
 						Required: false,

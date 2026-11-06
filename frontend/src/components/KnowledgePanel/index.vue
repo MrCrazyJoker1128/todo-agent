@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full h-full col-start-start">
+  <div class="wb-kb w-full h-full col-start-start">
     <SearchArea @search="initTableList" />
     <div class="flex-1 w-full">
       <TableComp
@@ -81,5 +81,22 @@ function handleDelete(id: string) {
   });
 }
 </script>
+<style lang="scss" scoped>
+.wb-kb {
+  gap: 10px;
 
-<style lang="scss" scoped></style>
+  :deep(.el-table) {
+    border: 1px solid var(--wb-line-soft);
+    border-radius: var(--wb-radius);
+    overflow: hidden;
+  }
+
+  :deep(a) {
+    color: var(--wb-accent);
+    text-decoration: none;
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+</style>

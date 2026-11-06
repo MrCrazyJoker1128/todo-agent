@@ -12,5 +12,11 @@ func RegisterRoutes(group *ghttp.RouterGroup) {
 		group.POST("/add", knowledge.NewKnowledgeController().AddKnowledge)
 		group.GET("/list", knowledge.NewKnowledgeController().GetKnowledgeList)
 		group.DELETE("/delete", knowledge.NewKnowledgeController().DeleteKnowledgeUrl)
+		group.POST("/bases", knowledge.NewKnowledgeController().CreateBase)
+		group.GET("/bases", knowledge.NewKnowledgeController().ListBases)
+		group.DELETE("/bases/delete", knowledge.NewKnowledgeController().DeleteBase)
+		group.GET("/files", knowledge.NewKnowledgeController().ListFiles)
+		group.DELETE("/files/delete", knowledge.NewKnowledgeController().DeleteFile)
+		group.POST("/upload", knowledge.NewKnowledgeController().UploadMd)
 	})
 }

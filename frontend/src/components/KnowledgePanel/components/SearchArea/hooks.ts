@@ -10,7 +10,7 @@ export function useCreateKnowledgeUrlHooks(): {
   knowledgeUrlObj: CreateKnowledgeUrlRequest;
   handleAdd: () => void;
 } {
-  const knowledgeUrlObj = reactive<CreateKnowledgeUrlRequest>({ url: "" });
+  const knowledgeUrlObj = reactive<CreateKnowledgeUrlRequest>({ url: "", libraryId: "" });
   const { copyLoadingOption: loadingOption, func: createKnowledgeUrlFunc } =
     useRequestHook({
       requestFunc: fetchCreateKnowledgeUrl,

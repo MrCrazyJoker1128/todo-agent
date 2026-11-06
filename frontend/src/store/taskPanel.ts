@@ -1,16 +1,16 @@
 import { defineStore } from "pinia";
 import { ref, watch } from "vue";
 
-export type TabName = "calendar" | "list" | "knowledge";
+export type TabName = "calendar" | "list";
 
 const STORAGE_KEY = "task-panel-active-tab";
 
 function loadFromStorage(): TabName {
   const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored !== null) {
-    return stored as TabName;
+  if (stored === "calendar" || stored === "list") {
+    return stored;
   }
-  return "calendar";
+  return "list";
 }
 
 export const useTaskPanelStore = defineStore("taskPanel", () => {

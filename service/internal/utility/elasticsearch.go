@@ -112,9 +112,12 @@ func ESIndex(ctx context.Context, index, id string, document any) error {
 		return fmt.Errorf("failed to marshal document: %w", err)
 	}
 
+	// wait_for:写入后等到可被搜索再返回;否则前端紧接着的列表查询看不到刚写的文档
+	//(ES 默认 refresh_interval=1s),表现为上传成功后列表不刷新。
 	res, err := client.Index(index, bytes.NewReader(body),
 		client.Index.WithContext(ctx),
 		client.Index.WithDocumentID(id),
+		client.Index.WithRefresh("wait_for"),
 	)
 	if err != nil {
 		return fmt.Errorf("es index error: %w", err)

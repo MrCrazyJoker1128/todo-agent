@@ -1,5 +1,5 @@
 <template>
-  <div class="list-panel">
+  <div class="list-panel h-full">
     <div v-if="loading" class="loading-state">
       <el-icon class="is-loading"><i class="i-ep-loading"></i></el-icon>
       <span>加载中...</span>
@@ -73,6 +73,7 @@
             :key="task.id"
             :task="convertToTaskItem(task)"
             @update="handleTaskUpdate"
+            @updateTask="() => showUpdateTaskDialog(task)"
           />
         </div>
       </div>
@@ -97,17 +98,22 @@
               :key="task.id"
               :task="convertToTaskItem(task)"
               @update="handleTaskUpdate"
+              @updateTask="() => showUpdateTaskDialog(task)"
             />
           </div>
         </div>
       </div>
     </template>
+    <UpdateTaskDialog
+      v-model:dialogVisible="dialogVisible"
+      ref="updateTaskDialogRef"
+      @success="() => fetchTasks(mode)"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from "vue";
-import TaskItem from "../TaskItem/index.vue";
+import type { TaskItem } from "@/api/task/type";
 import { useTaskFilter, useTaskMode, useTaskList } from "./hooks";
 import eventBus from "@/utils/eventbus";
 
@@ -120,6 +126,9 @@ interface Task {
   status: "todo" | "doing" | "done" | "cancelled";
 }
 
+const emit = defineEmits<{
+  (e: "today-count", n: number): void;
+}>();
 const { mode, handleModeChange } = useTaskMode();
 const {
   selectedPriorities,
@@ -158,10 +167,16 @@ eventBus.on("sseComplete", () => {
     fetchTasks(mode.value);
   }
 });
+watch(todayCount, (n) => emit("today-count", n), { immediate: true });
 onMounted(() => {
   fetchTasks(mode.value);
 });
-
+const dialogVisible = ref<boolean>(false);
+const updateTaskDialogRef = useTemplateRef("updateTaskDialogRef");
+function showUpdateTaskDialog(task: TaskItem) {
+  dialogVisible.value = true;
+  updateTaskDialogRef.value?.setTaskForm(task);
+}
 defineExpose({
   refresh: () => fetchTasks(mode.value),
 });
@@ -171,12 +186,7 @@ defineExpose({
 .list-panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(10px);
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(255, 138, 128, 0.08);
+  gap: 10px;
 }
 
 .loading-state {
@@ -186,21 +196,22 @@ defineExpose({
   justify-content: center;
   padding: 48px;
   gap: 12px;
-  color: #909399;
+  color: var(--wb-text-3);
 
   .el-icon {
     font-size: 24px;
+    color: var(--wb-accent);
   }
 }
 
 /* Mode Tabs */
 .mode-tabs {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   padding: 4px;
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 10px;
-  border: 1px solid rgba(255, 138, 128, 0.12);
+  background: var(--wb-panel);
+  border-radius: 8px;
+  border: 1px solid var(--wb-line-soft);
 }
 
 .tab-btn {
@@ -209,33 +220,33 @@ defineExpose({
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 10px 16px;
-  font-size: 14px;
+  padding: 9px 14px;
+  font-size: 13px;
   font-weight: 500;
-  color: #606266;
+  color: var(--wb-text-3);
   background: transparent;
-  border: none;
-  border-radius: 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: all 0.2s;
 
   i {
-    font-size: 16px;
+    font-size: 15px;
   }
 
   &:hover {
-    color: rgba(255, 138, 128, 0.9);
-    background: rgba(255, 138, 128, 0.06);
+    color: var(--wb-text-2);
+    background: var(--wb-panel-2);
   }
 
   &.active {
-    color: #fff;
-    background: rgba(255, 138, 128, 0.9);
-    box-shadow: 0 2px 8px rgba(255, 138, 128, 0.35);
+    color: var(--wb-accent);
+    background: var(--wb-accent-dim);
+    border-color: var(--wb-accent-line);
 
     .tab-count {
-      background: rgba(255, 255, 255, 0.25);
-      color: #fff;
+      background: rgba(94, 234, 212, 0.2);
+      color: var(--wb-accent);
     }
   }
 }
@@ -245,13 +256,14 @@ defineExpose({
   align-items: center;
   justify-content: center;
   min-width: 20px;
-  height: 20px;
+  height: 18px;
   padding: 0 6px;
   font-size: 11px;
   font-weight: 600;
-  color: rgba(255, 138, 128, 0.9);
-  background: rgba(255, 138, 128, 0.12);
-  border-radius: 10px;
+  font-family: var(--wb-font-mono);
+  color: var(--wb-text-3);
+  background: var(--wb-panel-3);
+  border-radius: 9px;
 }
 
 /* Filter Bar */
@@ -260,11 +272,11 @@ defineExpose({
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.6);
-  border-radius: 10px;
-  border: 1px solid rgba(255, 138, 128, 0.1);
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--wb-panel);
+  border-radius: 8px;
+  border: 1px solid var(--wb-line-soft);
 }
 
 .priority-filters {
@@ -275,82 +287,61 @@ defineExpose({
 }
 
 .filter-label {
-  font-size: 13px;
-  color: #909399;
-  margin-right: 4px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--wb-text-3);
+  margin-right: 2px;
+  font-family: var(--wb-font-mono);
 }
 
 .priority-chip {
   padding: 5px 12px;
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   border: 1px solid transparent;
-  border-radius: 16px;
+  border-radius: 4px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s;
+  font-family: var(--wb-font-mono);
 
   &.high {
-    color: #f56c6c;
-    background: rgba(245, 108, 108, 0.1);
-    border-color: rgba(245, 108, 108, 0.2);
-
+    color: var(--wb-red);
+    background: rgba(248, 113, 113, 0.1);
+    border-color: rgba(248, 113, 113, 0.3);
     &.selected {
-      background: #f56c6c;
-      color: #fff;
-      border-color: #f56c6c;
-      box-shadow: 0 2px 6px rgba(245, 108, 108, 0.4);
+      background: var(--wb-red);
+      color: #0b0e14;
+      border-color: var(--wb-red);
     }
   }
-
   &.medium {
-    color: #e6a23c;
-    background: rgba(230, 162, 60, 0.1);
-    border-color: rgba(230, 162, 60, 0.2);
-
+    color: var(--wb-amber);
+    background: var(--wb-amber-dim);
+    border-color: rgba(251, 191, 36, 0.3);
     &.selected {
-      background: #e6a23c;
-      color: #fff;
-      border-color: #e6a23c;
-      box-shadow: 0 2px 6px rgba(230, 162, 60, 0.4);
+      background: var(--wb-amber);
+      color: #0b0e14;
+      border-color: var(--wb-amber);
     }
   }
-
   &.low {
-    color: #67c23a;
-    background: rgba(103, 194, 58, 0.1);
-    border-color: rgba(103, 194, 58, 0.2);
-
+    color: var(--wb-green);
+    background: rgba(52, 211, 153, 0.1);
+    border-color: rgba(52, 211, 153, 0.3);
     &.selected {
-      background: #67c23a;
-      color: #fff;
-      border-color: #67c23a;
-      box-shadow: 0 2px 6px rgba(103, 194, 58, 0.4);
+      background: var(--wb-green);
+      color: #0b0e14;
+      border-color: var(--wb-green);
     }
   }
-
   &:hover:not(.selected) {
-    opacity: 0.8;
-    transform: translateY(-1px);
+    filter: brightness(1.2);
   }
 }
 
 .type-select {
   width: 160px;
-
-  :deep(.el-select__wrapper) {
-    background: rgba(255, 255, 255, 0.8);
-    border-color: rgba(255, 138, 128, 0.15);
-    box-shadow: none;
-
-    &:hover {
-      border-color: rgba(255, 138, 128, 0.3);
-    }
-
-    &.is-focused {
-      border-color: rgba(255, 138, 128, 0.5);
-      box-shadow: 0 0 0 2px rgba(255, 138, 128, 0.1);
-    }
-  }
 }
 
 /* Filtered Tasks */
@@ -360,28 +351,22 @@ defineExpose({
 
 /* Completed Section */
 .completed-section {
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 10px;
-  border: 1px solid rgba(103, 194, 58, 0.2);
+  background: var(--wb-panel);
+  border-radius: var(--wb-radius);
+  border: 1px solid var(--wb-line-soft);
   overflow: hidden;
-  transition: all 0.3s ease;
-
-  &:hover {
-    box-shadow: 0 4px 16px rgba(103, 194, 58, 0.1);
-  }
 }
 
 .section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
+  padding: 12px 14px;
   cursor: pointer;
   user-select: none;
-  transition: background-color 0.2s ease;
-
+  transition: background-color 0.2s;
   &:hover {
-    background: rgba(103, 194, 58, 0.05);
+    background: var(--wb-panel-2);
   }
 }
 
@@ -389,38 +374,52 @@ defineExpose({
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 15px;
-  font-weight: 500;
-  color: #303133;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--wb-text-2);
 }
 
 .section-icon {
-  font-size: 18px;
-  color: #67c23a;
+  font-size: 16px;
+  color: var(--wb-green);
 }
 
 .section-count {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 22px;
-  height: 22px;
-  padding: 0 8px;
-  font-size: 12px;
-  font-weight: 500;
-  color: #fff;
-  background: #67c23a;
-  border-radius: 11px;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 7px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--wb-font-mono);
+  color: var(--wb-green);
+  background: rgba(52, 211, 153, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  border-radius: 9px;
 }
 
 .section-content {
-  padding: 0 16px 16px;
+  padding: 0 12px 12px;
 }
 
 .task-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+  position: relative;
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: 15px;
+    top: 12px;
+    bottom: 12px;
+    width: 1px;
+    background: var(--wb-line-soft);
+  }
 }
 
 .empty-state {
@@ -428,26 +427,23 @@ defineExpose({
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 32px 16px;
+  gap: 8px;
+  padding: 28px 16px;
   text-align: center;
-  font-size: 13px;
-  color: #909399;
-  background: rgba(255, 138, 128, 0.05);
+  font-size: 12px;
+  color: var(--wb-text-3);
+  background: var(--wb-panel);
   border-radius: 8px;
-  border: 1px dashed rgba(255, 138, 128, 0.2);
+  border: 1px dashed var(--wb-line);
+  font-family: var(--wb-font-mono);
+  letter-spacing: 0.06em;
 
   i {
-    font-size: 28px;
-    color: rgba(255, 138, 128, 0.3);
+    font-size: 24px;
+    color: var(--wb-line);
   }
-
   &.small {
-    padding: 20px 16px;
-
-    i {
-      font-size: 22px;
-    }
+    padding: 18px 14px;
   }
 }
 
@@ -457,15 +453,12 @@ defineExpose({
     flex-direction: column;
     align-items: flex-start;
   }
-
   .type-select {
     width: 100%;
   }
-
   .mode-tabs {
     flex-direction: column;
   }
-
   .tab-btn {
     justify-content: flex-start;
   }

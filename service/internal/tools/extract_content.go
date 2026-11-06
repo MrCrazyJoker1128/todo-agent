@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"service/internal/service/modelconfig"
 	"strings"
-	"time"
 
 	"github.com/cloudwego/eino-ext/components/document/loader/url"
-	"github.com/cloudwego/eino-ext/components/model/ark"
+	openaiModel "github.com/cloudwego/eino-ext/components/model/openai"
 	"github.com/cloudwego/eino/components/document"
 	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/components/tool"
@@ -50,14 +50,17 @@ func ExtractContentTool() tool.InvokableTool {
 	)
 }
 
-// createMiniMaxChatModel 创建 MiniMax ChatModel (与 chat.go 一致)
+// createMiniMaxChatModel 创建 MiniMax ChatModel (与 chat.go 一致对标 eino-learn 裸三字段)
+// Key 来源：当前用户的模型配置（AES-256-GCM 密文入库此处解密到内存）。
 func createMiniMaxChatModel(ctx context.Context) (model.ChatModel, error) {
-	timeout := 120 * time.Second
-	return ark.NewChatModel(ctx, &ark.ChatModelConfig{
-		BaseURL: "https://api.minimaxi.com/v1",
-		APIKey:  "sk-cp-tSDxyBrROyLiq2RwCat12rqHbrRnQUxeK7kLdY4g3jXstA8TG-L8vXkGv5aroe9O7pTf01OS5O_L2aHpmRRHg9ZRgWHGCbUavS7l9bN2mWDsruhxpejvyR0",
-		Model:   "MiniMax-M2.7",
-		Timeout: &timeout,
+	cred, err := modelconfig.Resolve(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return openaiModel.NewChatModel(ctx, &openaiModel.ChatModelConfig{
+		BaseURL: cred.BaseURL,
+		APIKey:  cred.APIKey,
+		Model:   cred.Model,
 	})
 }
 

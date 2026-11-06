@@ -1,0 +1,35 @@
+// 工作台设计基座：深空指挥舱
+// 所有色值引用 theme.css 的全局 var（--wb-* 为兼容别名，渐进迁移到 --brand/--surface）
+:root {
+  --wb-bg: var(--surface-1);
+  --wb-bg-deep: var(--surface-0);
+  --wb-panel: var(--surface-2);
+  --wb-panel-2: var(--surface-3);
+  --wb-panel-3: var(--surface-4);
+  --wb-line: var(--line);
+  --wb-line-soft: var(--line-soft);
+  --wb-text: var(--text-1);
+  --wb-text-2: var(--text-2);
+  --wb-text-3: var(--text-3);
+  --wb-accent: var(--brand);
+  --wb-accent-dim: var(--brand-dim);
+  --wb-accent-line: var(--brand-line);
+  --wb-amber: var(--status-amber);
+  --wb-amber-dim: var(--status-amber-dim);
+  --wb-red: var(--status-red);
+  --wb-green: var(--status-green);
+  --wb-blue: var(--status-blue);
+  --wb-radius: var(--radius);
+  --wb-font-display: var(--font-display);
+  --wb-font-body: var(--font-body);
+  --wb-font-mono: var(--font-mono);
+}
+
+.wb-font-display {
+  font-family: var(--wb-font-display);
+}
+.wb-mono {
+  font-family: var(--wb-font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}

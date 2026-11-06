@@ -9,8 +9,8 @@ export function useLogin(router: Router) {
   const userStore = useUserStore();
   const formRef = ref<FormInstance>();
   const form = reactive<LoginReq>({
-    email: "18322693860@163.com",
-    password: "123456",
+    email: "",
+    password: "",
   });
 
   const rules: FormRules = {

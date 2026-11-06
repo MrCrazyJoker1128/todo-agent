@@ -12,5 +12,11 @@ func RegisterRoutes(group *ghttp.RouterGroup) {
 		group.POST("/login", userController.Login)
 		group.POST("/register", userController.UserRegister)
 		group.GET("/userInfo", userController.GetUserInfo)
+		group.POST("/model-config", userController.SaveModelConfig)
+		group.GET("/model-config", userController.GetModelConfig)
+		group.POST("/system-kek", userController.SaveSystemKEK)
+		group.GET("/system-kek", userController.GetSystemKEK)
+		group.POST("/profile", userController.UpdateProfile)
+		group.POST("/password", userController.UpdatePassword)
 	})
 }

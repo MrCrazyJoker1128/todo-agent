@@ -532,4 +532,105 @@ defineExpose({
     min-width: 28px;
   }
 }
+
+/* ===== 工作台覆盖：深色日历 ===== */
+.calendar-panel {
+  background: transparent;
+}
+:deep(.el-calendar) {
+  background: transparent;
+  .el-calendar__title {
+    color: var(--wb-text);
+    font-family: var(--wb-font-display);
+    letter-spacing: 0.06em;
+  }
+  .el-calendar__header .el-button-group .el-button {
+    background: var(--wb-panel);
+    border-color: var(--wb-line-soft);
+    color: var(--wb-text-2);
+  }
+  .el-calendar-table thead th {
+    color: var(--wb-text-3);
+    font-family: var(--wb-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+  }
+  .el-calendar-table__body td {
+    border-color: var(--wb-line-soft) !important;
+    background: var(--wb-panel);
+    &.is-selected {
+      background: var(--wb-accent-dim) !important;
+    }
+    &:hover {
+      background: var(--wb-panel-2) !important;
+    }
+    &.today .day-number {
+      color: var(--wb-accent);
+      font-family: var(--wb-font-mono);
+      font-weight: 700;
+    }
+  }
+}
+.calendar-cell {
+  background: transparent;
+  &.other-month {
+    background: transparent;
+    opacity: 0.4;
+  }
+  &.is-today {
+    background: var(--wb-accent-dim);
+    border: 1px solid var(--wb-accent-line);
+  }
+  .day-number {
+    color: var(--wb-text-2);
+    font-family: var(--wb-font-mono);
+    font-size: 12px;
+  }
+}
+.task-chip {
+  background: var(--wb-accent-dim);
+  border: 1px solid var(--wb-accent-line);
+  color: var(--wb-accent);
+  border-radius: 4px;
+  .task-name {
+    font-weight: 500;
+  }
+  &:hover {
+    background: rgba(94, 234, 212, 0.2);
+  }
+}
+.tasks-header .tasks-title {
+  color: var(--wb-text);
+  font-family: var(--wb-font-display);
+  letter-spacing: 0.04em;
+}
+.tasks-header .tasks-count {
+  color: var(--wb-amber);
+  background: var(--wb-amber-dim);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  font-family: var(--wb-font-mono);
+}
+.task-item {
+  background: var(--wb-panel);
+  border: 1px solid var(--wb-line-soft);
+  border-left: 2px solid var(--wb-blue);
+  border-radius: 8px;
+  &:hover {
+    background: var(--wb-panel-2);
+  }
+}
+.task-item-title {
+  color: var(--wb-text);
+  &.completed {
+    color: var(--wb-text-3);
+  }
+}
+.deadline {
+  color: var(--wb-text-3);
+  font-family: var(--wb-font-mono);
+}
+.empty-state {
+  color: var(--wb-text-3);
+  font-family: var(--wb-font-mono);
+}
 </style>

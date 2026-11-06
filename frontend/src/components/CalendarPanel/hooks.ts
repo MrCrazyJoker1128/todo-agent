@@ -4,6 +4,7 @@
  */
 import { ref, watch, onMounted, onUnmounted, nextTick } from "vue";
 import { ElMessage } from "element-plus";
+import eventBus from "@/utils/eventbus";
 import { fetchGetTaskList, fetchUpdateTaskStatus } from "@/api/task";
 import type { TaskItem as ApiTaskItem, TaskType } from "@/api/task/type";
 
@@ -246,6 +247,7 @@ export function useTask() {
         (t) => t.id !== task.id,
       );
       ElMessage.success("任务已完成");
+      eventBus.emit("task-changed");
     } catch {
       ElMessage.error("更新状态失败");
     }
@@ -262,6 +264,7 @@ export function useTask() {
         (t) => t.id !== task.id,
       );
       ElMessage.success("任务已取消");
+      eventBus.emit("task-changed");
     } catch {
       ElMessage.error("取消任务失败");
     }

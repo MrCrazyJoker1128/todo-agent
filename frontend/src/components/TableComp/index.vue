@@ -338,7 +338,8 @@ watch(
   },
 );
 
-function loadFunc(row: T, treeNode: unknown, resolve: (data: T[]) => void) {
+function loadFunc(row: T, _treeNode: unknown, resolve: (data: T[]) => void) {
+  void _treeNode;
   emit("load", row, resolve);
 }
 </script>

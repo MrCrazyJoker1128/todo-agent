@@ -2,10 +2,8 @@ package user
 
 import (
 	"context"
-	"errors"
 	"service/api"
-	"service/internal/dao"
-	"service/internal/utility"
+	svc "service/internal/service/user"
 
 	"github.com/gogf/gf/v2/frame/g"
 )
@@ -18,74 +16,42 @@ func NewUserController() *UserController {
 }
 
 func (c *UserController) Login(ctx context.Context, req *api.LoginReq) (res *api.LoginRes, err error) {
-	if req.Email == "" || req.Password == "" {
-		g.Log().Error(ctx, "email or password is empty")
-		return nil, errors.New("email or password is empty")
-	}
-	result, err := dao.DbUsers.GetUserByEmail(ctx, req.Email)
-	if err != nil {
-		g.Log().Error(ctx, "get user by email error: %v", err)
-		return nil, err
-	}
-	if result == nil {
-		g.Log().Error(ctx, "user not found")
-		return nil, errors.New("没有找到用户，请先注册")
-	}
-	if result.PasswordHash != req.Password {
-		g.Log().Error(ctx, "password error")
-		return nil, errors.New("邮箱或密码错误，请重新输入")
-	}
-	// 登录成功，返回token
-	token, err := utility.GenerateToken(ctx, result.Id.String())
-	utility.RedisSet(ctx, "token:"+result.Id.String(), token, utility.DefaultExpire)
-	if err != nil {
-		g.Log().Error(ctx, "token生成失败: %v", err)
-		return nil, err
-	}
-	return &api.LoginRes{
-		Token: token,
-	}, nil
+	return svc.Login(ctx, req)
 }
 
 func (c *UserController) UserRegister(ctx context.Context, req *api.RegisterReq) (res *api.RegisterRes, err error) {
-	if req.Email == "" || req.Password == "" || req.Nickname == "" {
-		g.Log().Error(ctx, "email or password or nickname is empty")
-		return nil, errors.New("email or password or nickname is empty")
-	}
-	result, err := dao.DbUsers.GetUserByEmail(ctx, req.Email)
-	if err != nil {
-		g.Log().Error(ctx, "get user by email error: %v", err)
-		return nil, err
-	}
-	if result != nil {
-		g.Log().Error(ctx, "email already registered")
-		return nil, errors.New("邮箱已被注册")
-	}
-	id, err := dao.DbUsers.Register(ctx, req)
-	if err != nil {
-		g.Log().Error(ctx, "register error: %v", err)
-		return nil, err
-	}
-	g.Log().Info(ctx, "注册成功, id: %v", id)
-	return &api.RegisterRes{
-		Message: "注册成功",
-	}, nil
+	return svc.UserRegister(ctx, req)
 }
+
 func (c *UserController) GetUserInfo(ctx context.Context, req *api.GetUserInfoReq) (res *api.GetUserInfoRes, err error) {
-	r := g.RequestFromCtx(ctx)
-	userId := r.GetParam("userId").String()
-	result, err := dao.DbUsers.GetUserById(ctx, userId)
-	if err != nil {
-		g.Log().Error(ctx, "get user by id error: %v", err)
-		return nil, err
-	}
-	if result == nil {
-		g.Log().Error(ctx, "user not found")
-		return nil, errors.New("没有找到用户，请先登录")
-	}
-	return &api.GetUserInfoRes{
-		Email:    result.Email,
-		Nickname: result.Nickname,
-		Id:       result.Id.String(),
-	}, nil
+	userID := g.RequestFromCtx(ctx).GetParam("userId").String()
+	return svc.GetUserInfo(ctx, userID)
+}
+
+func (c *UserController) SaveModelConfig(ctx context.Context, req *api.SaveModelConfigReq) (res *api.SaveModelConfigRes, err error) {
+	userID := g.RequestFromCtx(ctx).GetParam("userId").String()
+	return svc.SaveModelConfig(ctx, userID, req)
+}
+
+func (c *UserController) GetModelConfig(ctx context.Context, req *api.GetModelConfigReq) (res *api.GetModelConfigRes, err error) {
+	userID := g.RequestFromCtx(ctx).GetParam("userId").String()
+	return svc.GetModelConfig(ctx, userID)
+}
+
+func (c *UserController) SaveSystemKEK(ctx context.Context, req *api.SaveSystemKEKReq) (res *api.SaveSystemKEKRes, err error) {
+	return svc.SaveSystemKEK(ctx, req)
+}
+
+func (c *UserController) GetSystemKEK(ctx context.Context, req *api.GetSystemKEKReq) (res *api.GetSystemKEKRes, err error) {
+	return svc.GetSystemKEK(ctx)
+}
+
+func (c *UserController) UpdateProfile(ctx context.Context, req *api.UpdateProfileReq) (res *api.UpdateProfileRes, err error) {
+	userID := g.RequestFromCtx(ctx).GetParam("userId").String()
+	return svc.UpdateProfile(ctx, userID, req)
+}
+
+func (c *UserController) UpdatePassword(ctx context.Context, req *api.UpdatePasswordReq) (res *api.UpdatePasswordRes, err error) {
+	userID := g.RequestFromCtx(ctx).GetParam("userId").String()
+	return svc.UpdatePassword(ctx, userID, req)
 }

@@ -135,7 +135,7 @@ func (dao *dbTasksDao) UpdateTaskStatus(ctx context.Context, taskId string, stat
 // 获取任务列表
 func (dao *dbTasksDao) GetTaskList(ctx context.Context, req *api.GetTaskListReq, userId uuid.UUID) ([]*api.TaskItem, error) {
 	model := g.Model("db_tasks").
-		Fields("id, title, description, priority, task_type, status, to_char(due_date at time zone 'UTC', 'YYYY-MM-DD HH24:MI:SS') as due_date").
+		Fields("id, title, description, priority, task_type, status, to_char(due_date at time zone 'Asia/Shanghai', 'YYYY-MM-DD HH24:MI:SS') as due_date").
 		Where("user_id = ?", userId).
 		Where("is_deleted = ?", false).
 		Order("created_at desc")
@@ -144,7 +144,7 @@ func (dao *dbTasksDao) GetTaskList(ctx context.Context, req *api.GetTaskListReq,
 		startTime := strings.ReplaceAll(req.StartTime, "+", " ")
 		endTime := strings.ReplaceAll(req.EndTime, "+", " ")
 		g.Log().Info(ctx, "查询时间范围: startTime=%s, endTime=%s", startTime, endTime)
-		model = model.Where("due_date >= timestamptz(? || ' UTC') and due_date <= timestamptz(? || ' UTC')", startTime, endTime)
+		model = model.Where("due_date >= timestamptz(? || ' Asia/Shanghai') and due_date <= timestamptz(? || ' Asia/Shanghai')", startTime, endTime)
 	}
 	if req.TaskType != "" {
 		model = model.Where("task_type = ?", req.TaskType)
@@ -181,4 +181,91 @@ func (dao *dbTasksDao) GetLatestTaskByUserId(ctx context.Context, userId uuid.UU
 		return nil, err
 	}
 	return &task, nil
+}
+
+// SearchTasks 按时间/标题/内容查用户任务（agent 人机验证用）。
+// keyword 非空时匹配标题或内容；start/end 双非空走 BETWEEN，仅一端走半开区间；
+// limit<=0 默认 10、上限钳制 10。旧 GetTaskList 不动。
+func (dao *dbTasksDao) SearchTasks(ctx context.Context, userId uuid.UUID, keyword, start, end string, limit int) ([]*api.TaskItem, error) {
+	if limit <= 0 {
+		limit = 10
+	}
+	if limit > 10 {
+		limit = 10
+	}
+	model := g.Model("db_tasks").
+		Fields("id, title, description, priority, task_type, status, to_char(due_date at time zone 'Asia/Shanghai', 'YYYY-MM-DD HH24:MI:SS') as due_date").
+		Where("user_id = ?", userId).
+		Where("is_deleted = ?", false).
+		// 编辑/取消候选只含未完成任务：done/cancelled 不能编辑和取消。
+		Where("status IN ('todo','doing')").
+		Order("due_date ASC NULLS LAST, created_at desc").
+		Limit(limit)
+	if keyword != "" {
+		model = model.Where("(title ILIKE ? OR description ILIKE ?)", "%"+keyword+"%", "%"+keyword+"%")
+	}
+	if start != "" && end != "" {
+		startTime := strings.ReplaceAll(start, "+", " ")
+		endTime := strings.ReplaceAll(end, "+", " ")
+		model = model.Where("due_date >= timestamptz(? || ' Asia/Shanghai') and due_date <= timestamptz(? || ' Asia/Shanghai')", startTime, endTime)
+	} else if start != "" {
+		startTime := strings.ReplaceAll(start, "+", " ")
+		model = model.Where("due_date >= timestamptz(? || ' Asia/Shanghai')", startTime)
+	} else if end != "" {
+		endTime := strings.ReplaceAll(end, "+", " ")
+		model = model.Where("due_date <= timestamptz(? || ' Asia/Shanghai')", endTime)
+	}
+	var tasks []*api.TaskItem
+	if err := model.Scan(&tasks); err != nil {
+		return nil, err
+	}
+	if tasks == nil {
+		tasks = []*api.TaskItem{}
+	}
+	return tasks, nil
+}
+
+// QueryTasksForSummary 按起止+类型+紧急程度查全量任务（工作总结用，无 Limit 截断）。
+// 起止为空则不加时间条件（查全量）；taskType/priority 非空加精确匹配。旧 SearchTasks/GetTaskList 不动。
+func (dao *dbTasksDao) QueryTasksForSummary(ctx context.Context, userId uuid.UUID, start, end, taskType, priority string) ([]*api.TaskItem, error) {
+	model := g.Model("db_tasks").
+		Fields("id, title, description, priority, task_type, status, to_char(due_date at time zone 'Asia/Shanghai', 'YYYY-MM-DD HH24:MI:SS') as due_date").
+		Where("user_id = ?", userId).
+		Where("is_deleted = ?", false).
+		Order("due_date ASC NULLS LAST, created_at desc")
+	if start != "" && end != "" {
+		startTime := strings.ReplaceAll(start, "+", " ")
+		endTime := strings.ReplaceAll(end, "+", " ")
+		model = model.Where("due_date >= timestamptz(? || ' Asia/Shanghai') and due_date <= timestamptz(? || ' Asia/Shanghai')", startTime, endTime)
+	} else if start != "" {
+		startTime := strings.ReplaceAll(start, "+", " ")
+		model = model.Where("due_date >= timestamptz(? || ' Asia/Shanghai')", startTime)
+	} else if end != "" {
+		endTime := strings.ReplaceAll(end, "+", " ")
+		model = model.Where("due_date <= timestamptz(? || ' Asia/Shanghai')", endTime)
+	}
+	if taskType != "" {
+		model = model.Where("task_type = ?", taskType)
+	}
+	if priority != "" {
+		model = model.Where("priority = ?", priority)
+	}
+	var tasks []*api.TaskItem
+	if err := model.Scan(&tasks); err != nil {
+		return nil, err
+	}
+	if tasks == nil {
+		tasks = []*api.TaskItem{}
+	}
+	return tasks, nil
+}
+
+// PatchTask 按需更新任务字段（agent 确认后执行）。Where 带 user_id 隔离；
+// data 为空直接返回 nil。description/dueDate 清空走弹窗，本次不支持。
+func (dao *dbTasksDao) PatchTask(ctx context.Context, userId uuid.UUID, taskId string, data g.Map) error {
+	if len(data) == 0 {
+		return nil
+	}
+	_, err := g.Model("db_tasks").Ctx(ctx).Where("id = ? AND user_id = ?", taskId, userId).Data(data).Update()
+	return err
 }

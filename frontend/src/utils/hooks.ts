@@ -14,10 +14,10 @@ interface RequestHook {
 /**
  * 定义请求选项的接口
  */
-interface RequestOption<T> {
+interface RequestOption<T, R = T> {
   loadingText?: string;
   requestFunc: Function;
-  success: (res: IResult<T>) => void;
+  success: (res: IResult<R>) => void;
   fail?: (err: any) => void;
   finally?: () => void;
   time?: number;
@@ -31,7 +31,7 @@ interface RequestOption<T> {
  * 	func: 处理请求的函数，接受请求数据作为参数
  * }
  */
-export function useRequestHook<U>(options: RequestOption<U>): RequestHook {
+export function useRequestHook<U, R = U>(options: RequestOption<U, R>): RequestHook {
   // 初始化加载选项
   let loadingOption = reactive<LoadingOption>({
     loading: false,
@@ -50,7 +50,7 @@ export function useRequestHook<U>(options: RequestOption<U>): RequestHook {
     // 执行请求函数，并处理成功、失败和最终状态
     options
       .requestFunc(data)
-      .then((res: AxiosResponse<IResult<U>>) => {
+      .then((res: AxiosResponse<IResult<R>>) => {
         options.success(res.data);
       })
       .catch((err: any) => {

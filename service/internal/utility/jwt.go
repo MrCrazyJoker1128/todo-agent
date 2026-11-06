@@ -14,9 +14,23 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
+func jwtKey(ctx context.Context) string {
+	if key := g.Cfg().MustGet(ctx, "jwt.key", "todo-agent").String(); key != "" {
+		return key
+	}
+	return "todo-agent"
+}
+
+func jwtExpireSeconds(ctx context.Context) int64 {
+	if expire := g.Cfg().MustGet(ctx, "jwt.expire", 86400).Int64(); expire > 0 {
+		return expire
+	}
+	return 86400
+}
+
 func GenerateToken(ctx context.Context, userId string) (string, error) {
-	key := g.Cfg().MustGet(ctx, "jwt.key").String()
-	expire := g.Cfg().MustGet(ctx, "jwt.expire").Int()
+	key := jwtKey(ctx)
+	expire := jwtExpireSeconds(ctx)
 
 	claims := Claims{
 		UserId: userId,
@@ -31,7 +45,7 @@ func GenerateToken(ctx context.Context, userId string) (string, error) {
 }
 
 func ParseToken(ctx context.Context, tokenString string) (*Claims, error) {
-	key := g.Cfg().MustGet(ctx, "jwt.key").String()
+	key := jwtKey(ctx)
 
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (any, error) {
 		return []byte(key), nil

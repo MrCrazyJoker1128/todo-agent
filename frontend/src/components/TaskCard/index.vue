@@ -53,6 +53,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { ElMessage } from "element-plus";
+import eventBus from "@/utils/eventbus";
 import { fetchUpdateTaskStatus } from "@/api/task";
 
 // 任务卡片数据接口（匹配后端实际值）
@@ -162,6 +163,7 @@ const handleStatusChange = async () => {
     });
     
     emit("update", { ...props.task, status: newStatus });
+    eventBus.emit("task-changed");
     ElMessage.success(newStatus === "doing" ? "任务已开始" : "任务已完成");
   } catch (error) {
     ElMessage.error("更新状态失败");
@@ -176,6 +178,7 @@ const handleCancel = async () => {
     });
     
     emit("update", { ...props.task, status: "cancelled" });
+    eventBus.emit("task-changed");
     ElMessage.success("任务已取消");
   } catch (error) {
     ElMessage.error("取消任务失败");
