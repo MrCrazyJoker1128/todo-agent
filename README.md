@@ -45,8 +45,10 @@ docker compose up -d --build
 # 4. 灌嵌入模型（ollama 卷是空的，一次即可，几个 G，看网速）
 docker compose exec ollama ollama pull qwen3-embedding:8b
 
-# 5. 浏览器开 http://localhost:8080，注册账号
-# 6. 设置页配模型 Key（对话用，需自己申请 MiniMax/OpenAI 兼容 Key）
+# 5. 浏览器开 http://localhost:8080，用演示账号直接登录：
+#    邮箱 demo@todo-agent.local，密码 123456（compose 首次启动自动建好）
+# 6. 设置页配对话模型 Key（聊天用，需自己申请 MiniMax/OpenAI 兼容 Key）
+#    KEK 已预置默认值，开箱即用；生产请在设置页轮换
 #    嵌入模型默认 qwen3-embedding:8b，直连 compose 内 ollama，不用改
 ```
 

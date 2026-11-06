@@ -34,6 +34,7 @@ services:
       - ./sql/migration_embed_nullable.sql:/docker-entrypoint-initdb.d/schema/45-embed-nullable.sql:ro
       - ./sql/migration_knowledge_bases.sql:/docker-entrypoint-initdb.d/schema/50-kb.sql:ro
       - ./sql/migration_task_summaries.sql:/docker-entrypoint-initdb.d/schema/60-tasksum.sql:ro
+      - ./sql/seed_default.sql:/docker-entrypoint-initdb.d/schema/90-seed.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${PG_USER:-postgres} -d ${PG_DB:-todo-agent}"]
       interval: 5s
