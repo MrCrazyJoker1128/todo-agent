@@ -184,6 +184,21 @@ func RunAgentStream(ctx context.Context, userID, content string, onEvent StreamE
 	}
 
 	prev := loadRecentHistory(ctx, userID, 30)
+	if isCreateIntent(content) {
+		// 当前就是创建意图：历史里的一模一样记录是上一次执行，不是本次的重复——
+		// 把它们从输入历史里拿掉，模型才敢调 create_task，否则会压成 query_tasks。
+		filtered := prev[:0:0]
+		for _, m := range prev {
+			if m.Role == schema.User && isCreateIntent(m.Content) {
+				continue
+			}
+			if m.Role == schema.Assistant && (strings.Contains(m.Content, "已创建任务") || strings.Contains(m.Content, "task-edit")) {
+				continue
+			}
+			filtered = append(filtered, m)
+		}
+		prev = filtered
+	}
 	chatMsg := append(prev, &schema.Message{Role: schema.User, Content: content})
 
 	callback := react.BuildAgentCallback(nil, nil)
@@ -649,6 +664,9 @@ func (h *toolResultHandler) GetTaskListText() string {
 	return h.taskListText
 }
 
+// isCreateIntent 当前这条消息本身就是创建意图（首轮直建或确认回环）：
+// 此时历史里即使有一模一样的创建记录，也不算"重复执行"——用户明确要求再建一次。
+// 供 system 提示词引用，压住"历史动作不得重复执行"对当前指令的误伤。
 // isTaskLocateIntent 原文是否含改/删意图：有则 query_tasks 结果走候选卡确认，
 // 无则走纯文本列表直接答。确认回环文本（确认修改任务/我选删除任务/确认删除任务…）
 // 自带改删字样，必须走定位分支，否则确认后反而列成文本不执行。
@@ -656,6 +674,24 @@ func isTaskLocateIntent(ctx context.Context) bool {
 	content, _ := ctx.Value("user_content").(string)
 	for _, kw := range []string{"改", "编辑", "修改", "删除", "删", "取消"} {
 		if strings.Contains(content, kw) {
+			return true
+		}
+	}
+	return false
+}
+
+// isCreateIntent 当前消息是否创建意图：以 /添加任务 开头，或含"添加任务/新建任务/创建任务"
+// 且非"确认创建任务"回环（回环走 handleConfirmText 硬执行，不进模型）。
+func isCreateIntent(content string) bool {
+	trimmed := strings.TrimSpace(content)
+	if strings.HasPrefix(trimmed, "确认创建任务") {
+		return false
+	}
+	if strings.HasPrefix(trimmed, "/添加任务") {
+		return true
+	}
+	for _, kw := range []string{"添加任务", "新建任务", "创建任务", "新增任务"} {
+		if strings.Contains(trimmed, kw) {
 			return true
 		}
 	}
