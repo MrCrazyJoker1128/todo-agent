@@ -143,6 +143,10 @@ func RunAgentStream(ctx context.Context, userID, content string, onEvent StreamE
 	ctx = context.WithValue(ctx, "user_id", userID)
 	ctx = context.WithValue(ctx, "user_content", content)
 
+	if done, reply := handleConfirmText(ctx, userID, content, parsedUserID, onEvent); done {
+		return reply
+	}
+
 	if reply, ok := cancelReply(content); ok {
 		if err := saveChatMessage(ctx, uuid.New(), parsedUserID, content, "user", uuid.Nil); err != nil {
 			return fmt.Errorf("insert chat message: %w", err)
@@ -430,9 +434,9 @@ func executeToolCall(ctx context.Context, tc *schema.ToolCall, userId string, to
 	g.Log().Info(ctx, "[executeToolCall] 收到工具调用: name=%s, args=%s", tc.Function.Name, argsJSON)
 
 	if tc.Function.Name == "create_task" {
-		// 人机验证：首轮只预览不入库。把模型参数包成 task-edit envelope 给前端渲染确认卡；
-		// 用户发 确认创建任务 后下一轮 agent 再调本工具真建（见 taskEditConfirmed 判定）。
 		if !taskEditConfirmed(ctx) {
+			// 人机验证：首轮只预览不入库。把模型参数包成 task-edit envelope 给前端渲染确认卡；
+			// 用户发 确认创建任务 后下一轮 agent 再调本工具真建（见 taskEditConfirmed 判定）。
 			g.Log().Info(ctx, "[create_task] 预览拦截, args=%s", argsJSON)
 			toolHandler.mu.Lock()
 			toolHandler.taskEditPreview = argsJSON

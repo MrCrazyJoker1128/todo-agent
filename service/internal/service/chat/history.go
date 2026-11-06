@@ -2,13 +2,17 @@ package chat
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"regexp"
 	"strings"
 
 	"service/internal/dao"
+	"service/internal/tools"
 
 	"github.com/cloudwego/eino/schema"
 	"github.com/gogf/gf/v2/frame/g"
+	"github.com/google/uuid"
 )
 
 // taskFenceRe 兜掉落库文本里的任务 envelope fence（```task-* … ```），
@@ -164,4 +168,72 @@ func FixToolPairs(msgs []*schema.Message) []*schema.Message {
 		out = append(out, m)
 	}
 	return out
+}
+
+// handleConfirmText 确认文本硬执行：前端确认卡发机器格式（确认创建/修改/删除任务：{json}），
+// 不经模型直接调工具真执行，成功回自然语言结果。返回 done=true 时调用方直接 return nil。
+// 背景：模型经常把确认当新查询（调 query_tasks keyword=标题），导致点了确认没反应。
+func handleConfirmText(ctx context.Context, userID, content string, userIDUUID uuid.UUID, onEvent StreamEventHandler) (bool, error) {
+	trimmed := strings.TrimSpace(content)
+	var prefix, toolName string
+	switch {
+	case strings.HasPrefix(trimmed, "确认创建任务："), strings.HasPrefix(trimmed, "确认创建任务:"):
+		prefix, toolName = "确认创建任务", "create_task"
+	case strings.HasPrefix(trimmed, "确认修改任务："), strings.HasPrefix(trimmed, "确认修改任务:"):
+		prefix, toolName = "确认修改任务", "update_task"
+	case strings.HasPrefix(trimmed, "确认删除任务："), strings.HasPrefix(trimmed, "确认删除任务:"):
+		prefix, toolName = "确认删除任务", "cancel_task"
+	default:
+		return false, nil
+	}
+	// 存 user 原文 + 回 received（与正常链路一致，保证历史连贯）。
+	if err := saveChatMessage(ctx, uuid.New(), userIDUUID, content, "user", uuid.Nil); err != nil {
+		return true, fmt.Errorf("insert chat message: %w", err)
+	}
+	onEvent("received", content, uuid.New(), uuid.Nil)
+	systemChatID := uuid.New()
+	onEvent("send_response", "", systemChatID, uuid.Nil)
+
+	argsJSON := strings.TrimSpace(trimmed[len(prefix):])
+	// 兼容全角/半角冒号两种分隔
+	argsJSON = strings.TrimPrefix(argsJSON, "：")
+	argsJSON = strings.TrimPrefix(argsJSON, ":")
+	argsJSON = strings.TrimSpace(argsJSON)
+
+	ctxWithUserId := context.WithValue(ctx, "user_id", userID)
+	var finalContent string
+	var relatedID = uuid.Nil
+	switch toolName {
+	case "create_task":
+		result, err := tools.CreateTask().InvokableRun(ctxWithUserId, argsJSON)
+		if err != nil {
+			finalContent = "创建失败：" + err.Error()
+			break
+		}
+		var taskIDStr string
+		if json.Unmarshal([]byte(result), &taskIDStr) == nil {
+			if id, err := uuid.Parse(taskIDStr); err == nil {
+				relatedID = id
+			}
+		}
+		finalContent = "已创建任务。"
+	case "update_task":
+		result, err := tools.UpdateTaskTool().InvokableRun(ctxWithUserId, argsJSON)
+		if err != nil {
+			finalContent = "修改失败：" + err.Error()
+			break
+		}
+		finalContent = "已更新任务：" + strings.TrimSpace(result)
+	case "cancel_task":
+		if _, err := tools.CancelTask().InvokableRun(ctxWithUserId, argsJSON); err != nil {
+			finalContent = "删除失败：" + err.Error()
+			break
+		}
+		finalContent = "已删除任务。"
+	}
+	if err := saveChatMessage(ctx, systemChatID, userIDUUID, finalContent, "assistant", relatedID); err != nil {
+		return true, fmt.Errorf("insert chat message failed: %w", err)
+	}
+	onEvent("complete", finalContent, systemChatID, relatedID)
+	return true, nil
 }
