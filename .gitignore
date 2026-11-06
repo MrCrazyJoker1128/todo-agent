@@ -1,7 +1,7 @@
 # 依赖与构建产物
 node_modules/
 dist/
-*.local
+.env.local
 
 # 本地运行配置（复制 .example 文件后按自己环境改，不入库）
 frontend/.env.development

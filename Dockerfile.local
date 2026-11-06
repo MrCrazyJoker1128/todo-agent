@@ -1,0 +1,39 @@
+# 本地验证版：前端打进 dist，由 GoFrame 同源托管，单容器跑通前后端。
+# PG / ES / Redis / ollama 用宿主机现有的，容器内经 host.docker.internal 连接。
+# 用法：
+#   docker build -f Dockerfile.local -t todo-agent:local .
+#   docker run --rm -p 8080:8080 \
+#     -v $(pwd)/service/manifest/config/config.yaml:/app/service/manifest/config/config.yaml:ro \
+#     -e MODEL_KEY_ENC_KEY=你的KEK \
+#     todo-agent:local
+#
+# 注意：容器内连宿主机服务，config.yaml 里的 127.0.0.1 要改成 host.docker.internal
+#（PG / ES / ollama 三处），或在 run 时加 --add-host=host.docker.internal:host-gateway。
+FROM node:24-alpine AS frontend
+WORKDIR /app/frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
+# 对接同源后端：构建时把 API 基址指到 /api（经 GoFrame 同源，无跨域）
+RUN VITE_APP_BASE_API=/api npm run build
+
+# ---------- 后端构建 ----------
+FROM golang:1.25-alpine AS backend
+WORKDIR /app/service
+COPY service/go.mod service/go.sum ./
+RUN go mod download
+COPY service/ ./
+RUN CGO_ENABLED=0 go build -o ./main main.go
+
+# ---------- 运行 ----------
+FROM alpine:3.21
+WORKDIR /app
+RUN apk add --no-cache ca-certificates tzdata \
+  && cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+COPY --from=backend /app/service/main ./main
+COPY --from=backend /app/service/manifest ./manifest
+COPY --from=backend /app/service/sql ./sql
+# 前端 dist 由 GoFrame 托管（见 manifest/config/config.yaml 的 server.root 注释）
+COPY --from=frontend /app/frontend/dist ./resource/public
+EXPOSE 8080
+ENTRYPOINT ["./main"]
